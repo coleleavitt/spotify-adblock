@@ -1,5 +1,12 @@
 # spotify-adblock
+
 Spotify adblocker for Linux (macOS untested) that works by wrapping `getaddrinfo` and `cef_urlrequest_create`. It blocks requests to domains that are not on the allowlist, as well as URLs that are on the denylist.
+
+## Recent Updates
+
+* Now compatible with Rust 2024 edition
+* Improved code safety with explicit unsafe blocks
+* Enhanced blocking of ad-related endpoints
 
 ### Notes
 * This **does not** work with the snap Spotify package.
@@ -10,7 +17,7 @@ Spotify adblocker for Linux (macOS untested) that works by wrapping `getaddrinfo
 Prerequisites:
 * Git
 * Make
-* Rust
+* Rust 1.75+ (supports 2024 edition)
 * [Cargo](https://doc.rust-lang.org/cargo/)
 
 ```bash
@@ -35,6 +42,13 @@ $ flatpak override --user --filesystem="~/.spotify-adblock/spotify-adblock.so" -
 ### Command-line
 ```bash
 $ LD_PRELOAD=/usr/local/lib/spotify-adblock.so spotify
+```
+
+#### Debug Mode
+You can enable debug mode to see all requests (blocked and allowed) by setting the `SPOTIFY_ADBLOCK_DEBUG` environment variable:
+
+```bash
+$ SPOTIFY_ADBLOCK_DEBUG=1 LD_PRELOAD=/usr/local/lib/spotify-adblock.so spotify
 ```
 
 #### Flatpak
@@ -103,3 +117,14 @@ The allowlist and denylist can be configured in a config file located at (in des
 * `$XDG_CONFIG_HOME/spotify-adblock/config.toml`
 * `~/.config/spotify-adblock/config.toml`
 * `/etc/spotify-adblock/config.toml` *(default)*
+
+## How It Works
+
+The adblocker uses two main strategies to block ads:
+1. **Domain filtering**: Uses the `getaddrinfo` hook to block connections to domains not on the allowlist
+2. **URL filtering**: Uses the `cef_urlrequest_create` hook to block URLs on the denylist
+
+Special categories automatically handled:
+* Discord RPC connections (allowed)
+* Dealer/websocket connections (allowed)
+* Ad-related endpoints (blocked)
