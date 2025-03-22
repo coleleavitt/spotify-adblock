@@ -74,10 +74,15 @@ allowlist = [
     'audio-sp-.*\.spotifycdn\.net', # audio
     'dovetail\.prxu\.org', # podcasts
     'dovetail-cdn\.prxu\.org', # podcasts
+    '.*discord.*', # Allow Discord domains
+    '.*presence.*', # Allow presence-related endpoints
+    '.*-dealer\.g2\.spotify\.com', # Allow dealer endpoints for websockets
+    'spclient\.wg\.spotify\.com/gabo-receiver-service/.*'
+
 ]
 
 denylist = [
-    'https://spclient\.wg\.spotify\.com/ads/.*', # ads
-    'https://spclient\.wg\.spotify\.com/ad-logic/.*', # ads
-    'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*', # tracking
+    #'https://spclient\.wg\.spotify\.com/ads/.*', # ads
+    #'https://spclient\.wg\.spotify\.com/ad-logic/.*', # ads
+   # 'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*/events(?!.*discord.*)',
 ]

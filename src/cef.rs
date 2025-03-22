@@ -45,7 +45,7 @@ pub struct _cef_string_utf16_t {
 }
 pub type cef_string_utf16_t = _cef_string_utf16_t;
 pub type cef_string_userfree_utf16_t = *mut cef_string_utf16_t;
-extern "C" {
+unsafe extern "C" {
     pub fn cef_string_userfree_utf16_free(str_: cef_string_userfree_utf16_t);
 }
 pub type cef_string_userfree_t = cef_string_userfree_utf16_t;
@@ -2134,7 +2134,7 @@ pub struct _cef_urlrequest_t {
     pub cancel: ::std::option::Option<unsafe extern "C" fn(self_: *mut _cef_urlrequest_t)>,
 }
 pub type cef_urlrequest_t = _cef_urlrequest_t;
-extern "C" {
+unsafe extern "C" {
     pub fn cef_urlrequest_create(
         request: *mut _cef_request_t,
         client: *mut _cef_urlrequest_client_t,

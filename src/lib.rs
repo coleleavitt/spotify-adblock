@@ -4,10 +4,15 @@ use cef::{
     _cef_request_context_t, _cef_request_t, _cef_urlrequest_client_t, cef_string_userfree_utf16_t, cef_urlrequest_t,
 };
 use lazy_static::lazy_static;
-use libc::{addrinfo, c_char, dlsym, EAI_FAIL, RTLD_NEXT};
+use libc::{EAI_FAIL, RTLD_NEXT, addrinfo, c_char, dlsym};
 use regex::RegexSet;
 use serde::Deserialize;
 use std::{env, ffi::CStr, fs::read_to_string, mem, path::PathBuf, ptr::null, slice::from_raw_parts, string::String};
+
+// Add debug mode option that can be enabled with environment variable
+lazy_static! {
+    static ref DEBUG_MODE: bool = env::var("SPOTIFY_ADBLOCK_DEBUG").is_ok();
+}
 
 macro_rules! hook {
     ($function_name:ident($($parameter_name:ident: $parameter_type:ty),*) -> $return_type:ty => $new_function_name:ident $body:block) => {
@@ -22,8 +27,8 @@ macro_rules! hook {
             };
         }
 
-        #[no_mangle]
-        pub unsafe extern "C" fn $function_name($($parameter_name: $parameter_type),*) -> $return_type {
+        #[unsafe(no_mangle)]
+        pub extern "C" fn $function_name($($parameter_name: $parameter_type),*) -> $return_type {
             $body
         }
     }
@@ -76,11 +81,17 @@ lazy_static! {
 
 hook! {
     getaddrinfo(node: *const c_char, service: *const c_char, hints: *const addrinfo, res: *const *const addrinfo) -> i32 => REAL_GETADDRINFO {
-        let domain = CStr::from_ptr(node).to_str().unwrap();
+        let domain = unsafe { CStr::from_ptr(node) }.to_str().unwrap_or("");
+
+        // Always allow dealer domains which are needed for websockets
+        if domain.contains("dealer") || domain.contains("spotify.com") {
+            println!("[+] getaddrinfo:\t\t {}", domain);
+            return REAL_GETADDRINFO(node, service, hints, res);
+        }
 
         if CONFIG.allowlist.is_match(&domain) {
             println!("[+] getaddrinfo:\t\t {}", domain);
-            REAL_GETADDRINFO(node, service, hints, res)
+             REAL_GETADDRINFO(node, service, hints, res)
         } else {
             println!("[-] getaddrinfo:\t\t {}", domain);
             EAI_FAIL
@@ -90,23 +101,84 @@ hook! {
 
 hook! {
     cef_urlrequest_create(request: *mut _cef_request_t, client: *const _cef_urlrequest_client_t, request_context: *const _cef_request_context_t) -> *const cef_urlrequest_t => REAL_CEF_URLREQUEST_CREATE {
-        let url_cef = (*request).get_url.unwrap()(request);
-        let url_utf16 = from_raw_parts((*url_cef).str_, (*url_cef).length as usize);
-        let url = String::from_utf16(url_utf16).unwrap();
-        cef_string_userfree_utf16_free(url_cef);
+        let url_cef = unsafe { (*request).get_url.unwrap()(request) };
+        if url_cef.is_null() {
+            REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
+        }
 
-        if CONFIG.denylist.is_match(&url) {
-            println!("[-] cef_urlrequest_create:\t {}", url);
+        let url_utf16 = unsafe { from_raw_parts((*url_cef).str_, (*url_cef).length as usize) };
+        let url = String::from_utf16(url_utf16).unwrap_or_else(|_| String::new());
+
+        // Get request method for additional context
+        let method_cef = unsafe { (*request).get_method.unwrap()(request) };
+        let method_utf16 = unsafe { from_raw_parts((*method_cef).str_, (*method_cef).length as usize) };
+        let method = String::from_utf16(method_utf16).unwrap_or_else(|_| String::from("UNKNOWN"));
+         cef_string_userfree_utf16_free(method_cef);
+
+        // Rest of your logic stays the same, just add unsafe blocks around unsafe operations
+
+        // Improved Discord RPC detection
+        let is_discord_rpc = url.contains("discord") ||
+                           url.contains("discordapp") ||
+                           url.contains("presence") ||
+                           url.contains("/presence2/") ||
+                           url.contains("connect-state") ||
+                           url.contains("rpc");
+
+        // GABO receiver handles both ads and events including Discord communication
+        let is_gabo = url.contains("gabo-receiver-service");
+        let is_dealer = url.contains("dealer");
+        let is_ad_related = url.contains("/ads/") ||
+                          url.contains("ad-logic") ||
+                          url.contains("doubleclick") ||
+                          url.contains("googleads") ||
+                          url.contains("adswizz") ||
+                          url.contains("analytics") ||
+                          (url.contains("track") && url.contains("event")) ||
+                          (url.contains("ads") && !url.contains("gabo"));
+
+        if *DEBUG_MODE {
+            println!("[DEBUG] {} {}", method, url);
+            let result = REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
+            cef_string_userfree_utf16_free(url_cef);
+            return result;
+        }
+
+        if is_discord_rpc {
+            println!("[+] DISCORD RPC: {} {}", method, url);
+            let result = REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
+            cef_string_userfree_utf16_free(url_cef);
+            return result;
+        } else if is_gabo || is_dealer {
+            println!("[+] SERVICE: {} {}", method, url);
+            let result = REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
+            cef_string_userfree_utf16_free(url_cef);
+            return result;
+        }
+
+        if is_ad_related {
+            println!("[-] BLOCKED AD: {} {}", method, url);
+            cef_string_userfree_utf16_free(url_cef);
+            return null();
+        }
+
+        let result = if CONFIG.denylist.is_match(&url) {
+            println!("[-] BLOCKED CONFIG: {} {}", method, url);
             null()
         } else {
-            println!("[+] cef_urlrequest_create:\t {}", url);
-            REAL_CEF_URLREQUEST_CREATE(request, client, request_context)
-        }
+            println!("[+] ALLOWED: {} {}", method, url);
+            return REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
+        };
+
+        cef_string_userfree_utf16_free(url_cef);
+        result
     }
 }
 
 hook! {
     cef_string_userfree_utf16_free(_str: cef_string_userfree_utf16_t) -> () => REAL_CEF_STRING_USERFREE_UTF16_FREE {
-        REAL_CEF_STRING_USERFREE_UTF16_FREE(_str);
+        if !_str.is_null() {
+          REAL_CEF_STRING_USERFREE_UTF16_FREE(_str);
+        }
     }
 }
