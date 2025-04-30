@@ -23,7 +23,7 @@ Prerequisites:
 * Rust 1.75+ (supports 2024 edition)
 * [Cargo](https://doc.rust-lang.org/cargo/)
 
-```
+```bash
 # Using traditional Make
 $ git clone https://github.com/coleleavitt/spotify-adblock.git
 $ cd spotify-adblock
@@ -36,7 +36,7 @@ $ cargo make build
 ```
 
 ## Install
-```
+```bash
 # Using traditional Make
 $ sudo make install
 
@@ -45,7 +45,7 @@ $ sudo cargo make install
 ```
 
 #### Flatpak
-```
+```bash
 $ mkdir -p ~/.spotify-adblock && cp target/release/libspotifyadblock.so ~/.spotify-adblock/spotify-adblock.so
 $ mkdir -p ~/.var/app/com.spotify.Client/config/spotify-adblock && cp config.toml ~/.var/app/com.spotify.Client/config/spotify-adblock
 $ flatpak override --user --filesystem="~/.spotify-adblock/spotify-adblock.so" --filesystem="~/.config/spotify-adblock/config.toml" com.spotify.Client
@@ -53,19 +53,19 @@ $ flatpak override --user --filesystem="~/.spotify-adblock/spotify-adblock.so" -
 
 ## Usage
 ### Command-line
-```
+```bash
 $ LD_PRELOAD=/usr/local/lib/spotify-adblock.so spotify
 ```
 
 #### Debug Mode
 You can enable debug mode to see all requests (blocked and allowed) by setting the `SPOTIFY_ADBLOCK_DEBUG` environment variable:
 
-```
+```bash
 $ SPOTIFY_ADBLOCK_DEBUG=1 LD_PRELOAD=/usr/local/lib/spotify-adblock.so spotify
 ```
 
 #### Flatpak
-```
+```bash
 $ flatpak run --command=sh com.spotify.Client -c 'eval "$(sed s#LD_PRELOAD=#LD_PRELOAD=$HOME/.spotify-adblock/spotify-adblock.so:#g /app/bin/spotify)"'
 ```
 
@@ -78,7 +78,7 @@ Examples:
   <summary>Debian Package</summary>
   <p>
 
-```
+```desktop
 [Desktop Entry]
 Type=Application
 Name=Spotify (adblock)
@@ -98,7 +98,7 @@ StartupWMClass=spotify
   <summary>Flatpak</summary>
   <p>
 
-```
+```desktop
 [Desktop Entry]
 Type=Application
 Name=Spotify (adblock)
@@ -114,7 +114,7 @@ StartupWMClass=spotify
 </details>
 
 ## Uninstall
-```
+```sh
 # Using traditional Make
 $ sudo make uninstall
 
@@ -123,7 +123,7 @@ $ sudo cargo make uninstall
 ```
 
 #### Flatpak
-```
+```sh
 $ rm -r ~/.spotify-adblock ~/.config/spotify-adblock
 $ flatpak override --user --reset com.spotify.Client
 ```
