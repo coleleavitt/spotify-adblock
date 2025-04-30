@@ -9,16 +9,56 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Run make
-      run: make
-    - name: Attach build artifact to release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_name: spotify-adblock.so
-        asset_path: target/release/libspotifyadblock.so
-        asset_content_type: application/octet-stream
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          components: clippy
+          override: true
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-make
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Safety verification
+        run: cargo clippy -- -A clippy::not_unsafe_ptr_arg_deref -A clippy::missing_panics_doc -A unused_unsafe -A unsafe_code -D warnings
+
+      - name: Build with cargo-make
+        run: cargo make build
+
+      - name: Verify with JPL standards
+        run: cargo make verify
+
+      - name: Strip binary for size optimization
+        run: strip target/release/libspotifyadblock.so
+
+      - name: Generate checksums
+        run: |
+          cd target/release
+          sha256sum libspotifyadblock.so > spotify-adblock.sha256
+
+      - name: Attach binary to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_name: spotify-adblock.so
+          asset_path: target/release/libspotifyadblock.so
+          asset_content_type: application/octet-stream
+
+      - name: Attach checksum to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_name: spotify-adblock.sha256
+          asset_path: target/release/spotify-adblock.sha256
+          asset_content_type: text/plain

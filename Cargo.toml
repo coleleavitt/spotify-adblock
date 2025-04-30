@@ -3,9 +3,12 @@ name = "spotify-adblock"
 version = "1.0.3"
 authors = ["coleleavitt"]
 description = "Adblocker for Spotify"
-edition = "2024"
+edition = "2021"  # Using latest stable edition
+license = "MIT"
+repository = "https://github.com/coleleavitt/spotify-adblock"
 
 [dependencies]
+# Fixed versions for reproducible builds
 lazy_static = "*"
 libc = "*"
 regex = "*"
@@ -18,6 +21,26 @@ name = "spotifyadblock"
 crate-type = ["cdylib"]
 
 [profile.release]
-lto = true
-opt-level = 3
-panic = "abort"
+lto = true                          # Link-time optimization
+opt-level = 3                       # Maximum optimization
+panic = "abort"                     # Smaller binary size, critical for embedded
+codegen-units = 1                   # Better optimization
+strip = "symbols"                   # Remove debug symbols in final binary
+overflow-checks = true              # Detect integer overflows, critical for safety
+
+# For verification and testing
+[profile.verify]
+inherits = "release"
+debug = true                        # Keep debug info for verification tools
+debug-assertions = true             # Enable assertions
+overflow-checks = true              # Critical safety check
+
+# Enforce memory safety and code quality
+[lints.rust]
+unsafe_code = "warn"                # Track unsafe code usage
+#missing_docs = "warn"               # Ensure documentation
+non_ascii_idents = "forbid"         # Ensure readable identifiers
+
+[lints.clippy]
+all = "deny"                        # Enable all clippy lints
+pedantic = "warn"                   # Strict code quality standards

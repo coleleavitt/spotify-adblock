@@ -1,0 +1,14 @@
+[tasks.build]
+command = "cargo"
+args = ["build", "--release"]
+
+[tasks.install]
+dependencies = ["build"]
+script = [
+    "install -D --mode=644 --strip target/release/libspotifyadblock.so ${DESTDIR}${PREFIX}/lib/spotify-adblock.so",
+    "install -D --mode=644 config.toml ${DESTDIR}/etc/spotify-adblock/config.toml"
+]
+
+[tasks.verify]
+command = "cargo"
+args = ["build", "--profile", "verify"]

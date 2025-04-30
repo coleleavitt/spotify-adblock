@@ -21,7 +21,7 @@ Prerequisites:
 * [Cargo](https://doc.rust-lang.org/cargo/)
 
 ```bash
-$ git clone https://github.com/abba23/spotify-adblock.git
+$ git clone https://github.com/coleleavitt/spotify-adblock.git
 $ cd spotify-adblock
 $ make
 ```
