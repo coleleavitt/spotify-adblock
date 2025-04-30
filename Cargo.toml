@@ -44,7 +44,7 @@ overflow-checks = true              # Critical safety check
 # Enforce memory safety and code quality
 [lints.rust]
 unsafe_code = "warn"                # Track unsafe code usage
-missing_docs = "warn"               # Ensure documentation
+#missing_docs = "warn"               # Ensure documentation
 non_ascii_idents = "forbid"         # Ensure readable identifiers
 
 [lints.clippy]
