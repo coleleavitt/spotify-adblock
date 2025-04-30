@@ -171,4 +171,3 @@ This project now implements several safety features following JPL coding standar
 * Bounded execution with memory limits
 * Explicit unsafe blocks with proper error handling
 * Overflow checks and fault containment
-```
