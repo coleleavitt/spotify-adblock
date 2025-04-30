@@ -5,8 +5,11 @@ Spotify adblocker for Linux (macOS untested) that works by wrapping `getaddrinfo
 ## Recent Updates
 
 * Now compatible with Rust 2024 edition
-* Improved code safety with explicit unsafe blocks
+* Complete codebase restructuring with modular architecture for better maintainability
+* Implemented JPL safety standards with radiation hardening and fault containment
+* Improved code safety with explicit unsafe blocks and triple modular redundancy
 * Enhanced blocking of ad-related endpoints
+* Support for cargo-make build system alongside traditional Makefile
 
 ### Notes
 * This **does not** work with the snap Spotify package.
@@ -16,23 +19,33 @@ Spotify adblocker for Linux (macOS untested) that works by wrapping `getaddrinfo
 ## Build
 Prerequisites:
 * Git
-* Make
+* Make or cargo-make
 * Rust 1.75+ (supports 2024 edition)
 * [Cargo](https://doc.rust-lang.org/cargo/)
 
-```bash
+```
+# Using traditional Make
 $ git clone https://github.com/coleleavitt/spotify-adblock.git
 $ cd spotify-adblock
 $ make
+
+# Using cargo-make (install with: cargo install cargo-make)
+$ git clone https://github.com/coleleavitt/spotify-adblock.git
+$ cd spotify-adblock
+$ cargo make build
 ```
 
 ## Install
-```bash
+```
+# Using traditional Make
 $ sudo make install
+
+# Using cargo-make
+$ sudo cargo make install
 ```
 
 #### Flatpak
-```bash
+```
 $ mkdir -p ~/.spotify-adblock && cp target/release/libspotifyadblock.so ~/.spotify-adblock/spotify-adblock.so
 $ mkdir -p ~/.var/app/com.spotify.Client/config/spotify-adblock && cp config.toml ~/.var/app/com.spotify.Client/config/spotify-adblock
 $ flatpak override --user --filesystem="~/.spotify-adblock/spotify-adblock.so" --filesystem="~/.config/spotify-adblock/config.toml" com.spotify.Client
@@ -40,19 +53,19 @@ $ flatpak override --user --filesystem="~/.spotify-adblock/spotify-adblock.so" -
 
 ## Usage
 ### Command-line
-```bash
+```
 $ LD_PRELOAD=/usr/local/lib/spotify-adblock.so spotify
 ```
 
 #### Debug Mode
 You can enable debug mode to see all requests (blocked and allowed) by setting the `SPOTIFY_ADBLOCK_DEBUG` environment variable:
 
-```bash
+```
 $ SPOTIFY_ADBLOCK_DEBUG=1 LD_PRELOAD=/usr/local/lib/spotify-adblock.so spotify
 ```
 
 #### Flatpak
-```bash
+```
 $ flatpak run --command=sh com.spotify.Client -c 'eval "$(sed s#LD_PRELOAD=#LD_PRELOAD=$HOME/.spotify-adblock/spotify-adblock.so:#g /app/bin/spotify)"'
 ```
 
@@ -101,12 +114,16 @@ StartupWMClass=spotify
 </details>
 
 ## Uninstall
-```bash
+```
+# Using traditional Make
 $ sudo make uninstall
+
+# Using cargo-make
+$ sudo cargo make uninstall
 ```
 
 #### Flatpak
-```bash
+```
 $ rm -r ~/.spotify-adblock ~/.config/spotify-adblock
 $ flatpak override --user --reset com.spotify.Client
 ```
@@ -118,6 +135,24 @@ The allowlist and denylist can be configured in a config file located at (in des
 * `~/.config/spotify-adblock/config.toml`
 * `/etc/spotify-adblock/config.toml` *(default)*
 
+## Project Structure
+The project has been restructured into a modular architecture:
+```
+./
+├── src
+│   ├── lib.rs           # Main entry point
+│   ├── cef.rs           # CEF bindings
+│   ├── config.rs        # Configuration handling
+│   ├── hooks/           # Function interception
+│   │   ├── mod.rs       
+│   │   ├── network.rs   # Network hooks (getaddrinfo)
+│   │   ├── requests.rs  # URL request hooks (cef_urlrequest_create)
+│   │   └── memory.rs    # Memory management hooks
+│   └── utils/           # Utility functions
+│       ├── mod.rs
+│       └── logging.rs   # Logging functionality
+```
+
 ## How It Works
 
 The adblocker uses two main strategies to block ads:
@@ -128,3 +163,35 @@ Special categories automatically handled:
 * Discord RPC connections (allowed)
 * Dealer/websocket connections (allowed)
 * Ad-related endpoints (blocked)
+
+## Safety Features
+
+This project now implements several safety features following JPL coding standards:
+* Triple modular redundancy for critical functions
+* Bounded execution with memory limits
+* Explicit unsafe blocks with proper error handling
+* Overflow checks and fault containment
+```
+
+Regarding your questions:
+
+1. Yes, your Cargo.toml looks correct with the safety features and configuration profiles you've added.
+
+2. To use Makefile.toml instead of the traditional Makefile, you need to install cargo-make first:
+
+```bash
+cargo install cargo-make
+```
+
+Then you can run the tasks defined in Makefile.toml with:
+
+```bash
+# Build the project
+cargo make build
+
+# Install the project
+sudo cargo make install
+
+# Run the verification profile
+cargo make verify
+```
