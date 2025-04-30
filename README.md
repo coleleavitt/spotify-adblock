@@ -172,26 +172,3 @@ This project now implements several safety features following JPL coding standar
 * Explicit unsafe blocks with proper error handling
 * Overflow checks and fault containment
 ```
-
-Regarding your questions:
-
-1. Yes, your Cargo.toml looks correct with the safety features and configuration profiles you've added.
-
-2. To use Makefile.toml instead of the traditional Makefile, you need to install cargo-make first:
-
-```bash
-cargo install cargo-make
-```
-
-Then you can run the tasks defined in Makefile.toml with:
-
-```bash
-# Build the project
-cargo make build
-
-# Install the project
-sudo cargo make install
-
-# Run the verification profile
-cargo make verify
-```
