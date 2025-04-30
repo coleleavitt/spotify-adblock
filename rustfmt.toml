@@ -1,1 +1,21 @@
+# Basic formatting
 max_width = 120
+tab_spaces = 4
+hard_tabs = false
+newline_style = "Unix"
+
+# Code organization
+reorder_imports = true
+reorder_modules = true
+imports_layout = "HorizontalVertical"
+group_imports = "StdExternalCrate"
+
+# Safety-critical code preferences
+edition = "2024"
+merge_derives = false
+use_field_init_shorthand = false
+use_try_shorthand = false
+
+# Prevent rustfmt from trying to format bindgen-generated code
+skip_children = true
+ignore = ["src/cef.rs"]

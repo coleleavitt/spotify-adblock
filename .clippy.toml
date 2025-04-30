@@ -1,0 +1,11 @@
+# This is a minimal valid Clippy configuration
+# Most lints should be allowed directly in the source code
+
+# Adjust the maximum number of bools allowed in structs
+max-struct-bools = 10
+
+# Set MSRV to ensure compatibility
+msrv = "1.75.0"
+
+# Configure literal format options
+unreadable-literal-lint-fractions = false

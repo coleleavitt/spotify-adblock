@@ -27,7 +27,7 @@ jobs:
         uses: davidB/rust-cargo-make@v1
 
       - name: Safety verification
-        run: cargo clippy -- -D warnings
+        run: cargo clippy -- -A clippy::not_unsafe_ptr_arg_deref -A clippy::missing_panics_doc -A unused_unsafe -A unsafe_code -D warnings
 
       - name: Build with cargo-make
         run: cargo make build

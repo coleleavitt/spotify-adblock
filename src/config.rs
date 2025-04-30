@@ -5,7 +5,6 @@ use std::{env, fs::read_to_string, path::PathBuf};
 
 // Constants for fault containment
 const MAX_CONFIG_SIZE: usize = 1024 * 1024; // 1MB limit for config
-const MAX_PATTERN_LENGTH: usize = 1024;     // Maximum regex pattern length
 
 /// Debug mode enabled via environment variable
 lazy_static! {
@@ -31,7 +30,7 @@ fn load_config() -> Config {
         match env::var("XDG_CONFIG_HOME") {
             Ok(xdg_config_home) => PathBuf::from(xdg_config_home),
             #[allow(deprecated)] // std::env::home_dir() is only broken on Windows
-            Err(_) => PathBuf::from(env::home_dir().unwrap_or_default()).join(".config")
+            Err(_) => env::home_dir().unwrap_or_default().join(".config")
         }.join("spotify-adblock/config.toml"),
         PathBuf::from("/etc/spotify-adblock/config.toml"),
     ];
@@ -45,18 +44,18 @@ fn load_config() -> Config {
                         return config;
                     }
                     Err(error) => {
-                        println!("[*] Error: Parse config file ({})", error);
+                        println!("[*] Error: Parse config file ({error})");
                     }
                 }
             },
-            Ok(_) => println!("[*] Error: Config file too large (exceeds {} bytes)", MAX_CONFIG_SIZE),
+            Ok(_) => println!("[*] Error: Config file too large (exceeds {MAX_CONFIG_SIZE} bytes)"),
             Err(error) => {
-                println!("[*] Error: Read config file ({})", error);
+                println!("[*] Error: Read config file ({error})");
             }
         }
     } else {
         println!("[*] Error: No config file found");
-    };
+    }
 
     // Default empty configuration - safe fallback
     Config {

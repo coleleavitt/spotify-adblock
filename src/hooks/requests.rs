@@ -60,12 +60,9 @@ hook! {
 
         // Extract URL with safety checks
         let url_cef = unsafe {
-            match (*request).get_url {
-                Some(get_url) => get_url(request),
-                None => {
-                    logging::log_error("Missing get_url function in request");
-                    return REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
-                }
+            if let Some(get_url) = (*request).get_url { get_url(request) } else {
+                logging::log_error("Missing get_url function in request");
+                return REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
             }
         };
 
@@ -78,7 +75,7 @@ hook! {
         let url = String::from_utf16(url_utf16).unwrap_or_else(|_| String::new());
 
         let method_cef = unsafe { (*request).get_method.unwrap()(request) };
-        let method_utf16 = unsafe { from_raw_parts((*method_cef).str_, (*method_cef).length as usize) };
+        let method_utf16 = unsafe { from_raw_parts((*method_cef).str_, (*method_cef).length) };
         let method = String::from_utf16(method_utf16).unwrap_or_else(|_| String::from("UNKNOWN"));
         cef_string_userfree_utf16_free(method_cef);
 
@@ -87,7 +84,7 @@ hook! {
 
         // Debug mode handling
         if *DEBUG_MODE {
-            logging::log_debug(&format!("{} {}", method, url));
+            logging::log_debug(&format!("{method} {url}"));
             let result = REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
             cef_string_userfree_utf16_free(url_cef);
             return result;

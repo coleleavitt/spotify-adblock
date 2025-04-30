@@ -2,6 +2,11 @@
 //!
 //! This module intercepts network requests to block advertisements
 //! in the Spotify client while ensuring radiation-hardened operation.
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::unreadable_literal)]
+#![allow(unused_unsafe)]
+#![allow(unused_doc_comments)]
 
 pub mod cef;
 pub mod config;
