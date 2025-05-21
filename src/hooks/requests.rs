@@ -39,12 +39,22 @@ fn classify_url(url: &str) -> UrlClassification {
 
         is_dealer: url.contains("dealer"),
 
+        // Enhanced ad detection criteria including WhatsApp and all potential ad-related endpoints
         is_ad_related: url.contains("/ads/") ||
             url.contains("ad-logic") ||
             url.contains("doubleclick") ||
             url.contains("googleads") ||
             url.contains("adswizz") ||
             url.contains("analytics") ||
+            // TODO: Add more ad-related domains to actually block the *Powered By WhatsAPP issue on Today's Top Hits*
+            url.contains("sponsor") ||
+            url.contains("partnership") ||
+            url.contains("brand") ||
+            url.contains("whatsapp") ||
+            url.contains("hpto") ||
+            url.contains("promoted") ||
+            url.contains("takeover") ||
+            (url.contains("clientsettings") && url.contains("api")) ||
             (url.contains("track") && url.contains("event")) ||
             (url.contains("ads") && !url.contains("gabo"))
     }
@@ -105,6 +115,7 @@ hook! {
 
         if classification.is_ad_related {
             logging::log_blocked("BLOCKED AD", &method, &url);
+            // No response capturing for now to avoid segfaults
             cef_string_userfree_utf16_free(url_cef);
             return null();
         }

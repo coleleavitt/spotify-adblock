@@ -67,7 +67,7 @@ allowlist = [
     'audio-ak-spotify-com\.akamaized\.net', # audio
     'audio-akp-spotify-com\.akamaized\.net', # audio
     'audio4-ak-spotify-com\.akamaized\.net', # audio
-    'heads4-ak-spotify-com\.akamaized\.net', # audio (heads)
+#    'heads4-ak-spotify-com\.akamaized\.net', # audio (heads) PSA: apparently this also blocks label covers which is BS
     '.*\.cloudfront\.net', # podcasts
     'audio4-ak\.spotify\.com\.edgesuite\.net', # audio
     'scontent.*\.fbcdn\.net', # Facebook profile images
