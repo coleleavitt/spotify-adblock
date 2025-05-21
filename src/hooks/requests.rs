@@ -46,7 +46,7 @@ fn classify_url(url: &str) -> UrlClassification {
             url.contains("googleads") ||
             url.contains("adswizz") ||
             url.contains("analytics") ||
-            // TODO: Add more ad-related domains to actually block the *Powered By WhatsAPP issue on Today's Top Hits*
+            // TODO: Add more ad-related domains to actually block the *Powered By WhatsAPP issue on Today's Top Hits (Still a WIP)*
             url.contains("sponsor") ||
             url.contains("partnership") ||
             url.contains("brand") ||
