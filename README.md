@@ -135,24 +135,6 @@ The allowlist and denylist can be configured in a config file located at (in des
 * `~/.config/spotify-adblock/config.toml`
 * `/etc/spotify-adblock/config.toml` *(default)*
 
-## Project Structure
-The project has been restructured into a modular architecture:
-```
-./
-├── src
-│   ├── lib.rs           # Main entry point
-│   ├── cef.rs           # CEF bindings
-│   ├── config.rs        # Configuration handling
-│   ├── hooks/           # Function interception
-│   │   ├── mod.rs       
-│   │   ├── network.rs   # Network hooks (getaddrinfo)
-│   │   ├── requests.rs  # URL request hooks (cef_urlrequest_create)
-│   │   └── memory.rs    # Memory management hooks
-│   └── utils/           # Utility functions
-│       ├── mod.rs
-│       └── logging.rs   # Logging functionality
-```
-
 ## How It Works
 
 The adblocker uses two main strategies to block ads:
