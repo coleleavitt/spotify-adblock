@@ -1,0 +1,50 @@
+[package]
+name = "cef-sys"
+version = "0.1.0"
+edition = "2021"
+authors.workspace = true
+description = "Raw FFI bindings for Chromium Embedded Framework (CEF)"
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+readme = "README.md"
+links = "cef"  # Prevents multiple crates from linking to CEF
+keywords = ["cef", "chromium", "browser", "ffi", "bindings"]
+categories = ["external-ffi-bindings", "api-bindings"]
+
+[lib]
+doctest = false  # Disable doctests for auto-generated FFI bindings
+
+[build-dependencies]
+bindgen.workspace = true
+cc.workspace = true
+
+[dependencies]
+# CEF sys crates typically need minimal runtime dependencies
+# Add only if you need specific types for the bindings
+
+[features]
+default = []
+# Optional: Add features for different CEF configurations
+debug = []
+sandbox = []
+
+# Override workspace lints for auto-generated code
+[lints.rust]
+unsafe_code = "allow"
+missing_debug_implementations = "allow"
+missing_docs = "allow"
+
+[lints.clippy]
+all = "allow"
+pedantic = "allow"
+nursery = "allow"
+
+[package.metadata]
+docs.rs.all-features = true
+docs.rs.rustdoc-args = ["--cfg", "docsrs"]
+
+# Optional: Specify minimum CEF version compatibility
+[package.metadata.cef]
+min_version = "137.0.19"
+supported_platforms = ["linux", "windows", "macos"]

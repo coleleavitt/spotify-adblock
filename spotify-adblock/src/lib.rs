@@ -8,7 +8,6 @@
 #![allow(unused_unsafe)]
 #![allow(unused_doc_comments)]
 
-pub mod cef;
 pub mod config;
 pub mod hooks;
 pub mod utils;
@@ -28,7 +27,7 @@ macro_rules! hook {
             };
         }
 
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub extern "C" fn $function_name($($parameter_name: $parameter_type),*) -> $return_type {
             $body
         }

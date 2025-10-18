@@ -2,3 +2,6 @@ target/
 include/
 Cargo.lock
 .idea/
+
+# CEF binaries (downloaded during build)
+cef_binary_**
