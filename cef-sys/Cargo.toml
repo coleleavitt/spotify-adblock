@@ -46,5 +46,5 @@ docs.rs.rustdoc-args = ["--cfg", "docsrs"]
 
 # Optional: Specify minimum CEF version compatibility
 [package.metadata.cef]
-min_version = "137.0.19"
+min_version = "150.0.1"
 supported_platforms = ["linux", "windows", "macos"]

@@ -14,7 +14,7 @@ This crate provides low-level Rust bindings to the CEF C API, generated using bi
 ## Building
 
 ```bash
-export CEF_ROOT=/path/to/cef_binary_137.0.19+g8a1c4ce+chromium-137.0.7151.121_linux64
+export CEF_ROOT=/path/to/cef_binary_150.0.1+g3f36c80+chromium-150.0.7871.4_linux64_beta
 cargo build
 ```
 

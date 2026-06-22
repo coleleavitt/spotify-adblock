@@ -27,8 +27,8 @@ Prerequisites:
 ### Download CEF Binary (Local Development)
 ```bash
 # Download CEF binary for your platform from Spotify's CDN
-wget https://cef-builds.spotifycdn.com/cef_binary_137.0.19+g8a1c4ce+chromium-137.0.7151.121_linux64.tar.bz2
-tar -xjf cef_binary_137.0.19+g8a1c4ce+chromium-137.0.7151.121_linux64.tar.bz2
+wget https://cef-builds.spotifycdn.com/cef_binary_150.0.1%2Bg3f36c80%2Bchromium-150.0.7871.4_linux64_beta.tar.bz2
+tar -xjf cef_binary_150.0.1+g3f36c80+chromium-150.0.7871.4_linux64_beta.tar.bz2
 ```
 
 ### Build Options
@@ -43,7 +43,7 @@ $ ./debug_run.sh
 
 **Using traditional Make:**
 ```bash
-$ export CEF_ROOT="$PWD/cef_binary_137.0.19+g8a1c4ce+chromium-137.0.7151.121_linux64"
+$ export CEF_ROOT="$PWD/cef_binary_150.0.1+g3f36c80+chromium-150.0.7871.4_linux64_beta"
 $ make
 ```
 
@@ -55,7 +55,7 @@ $ cargo make build
 
 **Manual build with cargo:**
 ```bash
-$ export CEF_ROOT="$PWD/cef_binary_137.0.19+g8a1c4ce+chromium-137.0.7151.121_linux64"
+$ export CEF_ROOT="$PWD/cef_binary_150.0.1+g3f36c80+chromium-150.0.7871.4_linux64_beta"
 $ cargo build --release --lib
 ```
 

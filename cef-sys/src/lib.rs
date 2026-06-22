@@ -34,7 +34,7 @@
 include!(concat!(env!("OUT_DIR"), "/cef_bindings.rs"));
 
 // CEF library version information
-pub const CEF_VERSION_MAJOR: u32 = 137;
+pub const CEF_VERSION_MAJOR: u32 = 150;
 
 /// Helper function to check if CEF is initialized
 ///

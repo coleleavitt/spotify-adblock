@@ -2,6 +2,15 @@ target/
 include/
 Cargo.lock
 .idea/
+.claude/
+.codegraph/
 
 # CEF binaries (downloaded during build)
 cef_binary_**
+
+# Local source sparse checkouts and generated analysis notes
+cef/
+.debug-journal.md
+PREMIUM_UNLOCK_CONCEPT.md
+RESPONSE_PAYLOAD_INSPECTION.md
+SURGICAL_BLOCKING_FIXES.md

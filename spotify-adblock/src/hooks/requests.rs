@@ -1,126 +1,49 @@
-use cef_sys::{_cef_request_context_t, _cef_request_t, _cef_urlrequest_client_t, cef_urlrequest_t};
-use crate::config::{CONFIG, DEBUG_MODE};
-use lazy_static::lazy_static;
-use std::{ptr::null, slice::from_raw_parts, string::String};
+use std::{ptr::null_mut, slice::from_raw_parts};
 
+use cef_sys::{
+    _cef_request_context_t, _cef_request_t, _cef_urlrequest_client_t, cef_string_userfree_utf16_t, cef_urlrequest_t,
+};
+
+use crate::config::{CONFIG, DEBUG_MODE};
 use crate::hook;
 use crate::hooks::memory::cef_string_userfree_utf16_free;
 use crate::utils::logging;
 
-// Constants for fault containment
-const MAX_URL_LENGTH: usize = 2048;
+use super::request_classification::classify_url;
 
-/// URL classification with bounded execution and radiation hardening
-struct UrlClassification {
-    is_discord_rpc: bool,
-    is_gabo: bool,
-    is_dealer: bool,
-    is_ad_related: bool,
-    is_product_state: bool,
-}
-
-/// Fault-contained URL classifier with bounded execution
-fn classify_url(url: &str) -> UrlClassification {
-    // Ensure URL is within reasonable bounds (fault containment)
-    let url = if url.len() > MAX_URL_LENGTH {
-        &url[0..MAX_URL_LENGTH]
-    } else {
-        url
-    };
-
-    UrlClassification {
-        is_discord_rpc: url.contains("discord") ||
-            url.contains("discordapp") ||
-            url.contains("presence") ||
-            url.contains("/presence2/") ||
-            url.contains("connect-state") ||
-            url.contains("rpc"),
-
-        // Gabo service - ONLY allow non-ad events
-        is_gabo: url.contains("gabo-receiver-service") &&
-                 !url.contains("/advertisement") &&
-                 !url.contains("/ad-opportunity") &&
-                 !url.contains("/adlogic") &&
-                 !url.contains("/ads"),
-
-        is_dealer: url.contains("dealer"),
-
-        // Product state monitoring (for premium checks)
-        is_product_state: url.contains("product_state") || url.contains("product-state"),
-
-        // COMPREHENSIVE ad detection criteria
-        is_ad_related:
-            // Core ad endpoints
-            url.contains("/ads/") ||
-            url.contains("ad-logic") ||
-            url.contains("adlogic") ||
-
-            // CRITICAL: Track classification marker
-            url.contains("injected-ad") ||
-
-            // Third-party ad networks
-            url.contains("doubleclick") ||
-            url.contains("googleads") ||
-            url.contains("adswizz") ||
-
-            // Analytics and tracking
-            url.contains("analytics") ||
-            (url.contains("clientsettings") && url.contains("api")) ||
-            (url.contains("track") && url.contains("event")) ||
-
-            // Sponsored/Promoted content endpoints
-            url.contains("sponsor") ||
-            url.contains("/promotion/") ||
-            url.contains("spotify:promotion:") ||
-            url.contains("/partner/") ||
-            url.contains("spotify:partner:") ||
-            url.contains("partnership") ||
-            url.contains("promoted") ||
-
-            // Display ads and companion content
-            url.contains("companion-ad") ||
-            url.contains("companion_content") ||
-            url.contains("companion-content") ||
-            url.contains("canvas_ad") ||
-            url.contains("canvas-ad") ||
-            url.contains("/figs/") ||
-
-            // Skip limit enforcement
-            url.contains("RemainingSkipsRequest") ||
-            url.contains("RemainingSkipsResponse") ||
-            url.contains("skip-limit") ||
-            url.contains("skip_limit") ||
-
-            // Display segments (sponsored playlist banners)
-            url.contains("display-segments") ||
-            url.contains("display_segments") ||
-            url.contains("DisplaySegments") ||
-
-            // Gabo ad events (but not all gabo)
-            (url.contains("gabo-receiver-service") && (
-                url.contains("/advertisement") ||
-                url.contains("/ad-opportunity") ||
-                url.contains("/adlogic") ||
-                url.contains("/ads")
-            )) ||
-
-            // Misc ad-related
-            url.contains("brand") ||
-            url.contains("whatsapp") ||
-            url.contains("hpto") ||
-            url.contains("takeover")
+fn cef_userfree_utf16_to_string(value: cef_string_userfree_utf16_t) -> Option<String> {
+    if value.is_null() {
+        return None;
     }
+
+    // SAFETY: Category 8 - FFI boundary. `value` is a non-null CEF userfree
+    // string pointer returned by the request API for the duration of this call.
+    let cef_string = unsafe { &*value };
+    if cef_string.length == 0 {
+        return Some(String::new());
+    }
+
+    if cef_string.str_.is_null() {
+        return None;
+    }
+
+    // SAFETY: Category 10 - out-of-bounds. CEF reports `length` UTF-16 code
+    // units for the non-null `str_` pointer in this userfree string.
+    let utf16 = unsafe { from_raw_parts(cef_string.str_, cef_string.length) };
+    Some(String::from_utf16_lossy(utf16))
 }
 
 hook! {
-    cef_urlrequest_create(request: *mut _cef_request_t, client: *const _cef_urlrequest_client_t, request_context: *const _cef_request_context_t) -> *const cef_urlrequest_t => REAL_CEF_URLREQUEST_CREATE {
+    cef_urlrequest_create(request: *mut _cef_request_t, client: *mut _cef_urlrequest_client_t, request_context: *mut _cef_request_context_t) -> *mut cef_urlrequest_t => REAL_CEF_URLREQUEST_CREATE {
         // Validate input pointers
         if request.is_null() {
             logging::log_error("Null request pointer in cef_urlrequest_create");
-            return null();
+            return null_mut();
         }
 
         // Extract URL with safety checks
+        // SAFETY: Category 8 - FFI boundary. `request` is non-null and CEF owns
+        // the callback table for the duration of this hook call.
         let url_cef = unsafe {
             if let Some(get_url) = (*request).get_url { get_url(request) } else {
                 logging::log_error("Missing get_url function in request");
@@ -132,17 +55,30 @@ hook! {
             return REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
         }
 
-        // Safely extract URL and method strings
-        let url_utf16 = unsafe { from_raw_parts((*url_cef).str_, (*url_cef).length) };
-        let url = String::from_utf16(url_utf16).unwrap_or_else(|_| String::new());
+        let Some(url) = cef_userfree_utf16_to_string(url_cef) else {
+            cef_string_userfree_utf16_free(url_cef);
+            return REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
+        };
 
-        let method_cef = unsafe { (*request).get_method.unwrap()(request) };
-        let method_utf16 = unsafe { from_raw_parts((*method_cef).str_, (*method_cef).length) };
-        let method = String::from_utf16(method_utf16).unwrap_or_else(|_| String::from("UNKNOWN"));
+        // SAFETY: Category 8 - FFI boundary. `request` is non-null and CEF owns
+        // the callback table for the duration of this hook call.
+        let method_cef = unsafe {
+            if let Some(get_method) = (*request).get_method { get_method(request) } else {
+                logging::log_error("Missing get_method function in request");
+                cef_string_userfree_utf16_free(url_cef);
+                return REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
+            }
+        };
+
+        let Some(method) = cef_userfree_utf16_to_string(method_cef) else {
+            cef_string_userfree_utf16_free(url_cef);
+            cef_string_userfree_utf16_free(method_cef);
+            return REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
+        };
         cef_string_userfree_utf16_free(method_cef);
 
         // Classify URL using fault-contained function
-        let classification = classify_url(&url);
+        let classification = classify_url(&url, &method);
 
         // Debug mode handling
         if *DEBUG_MODE {
@@ -171,16 +107,23 @@ hook! {
             return result;
         }
 
+        // Block aggressive Gabo POST events (payload might contain ad data)
+        if classification.is_gabo_event_post {
+            logging::log_blocked("BLOCKED GABO POST", &method, &url);
+            cef_string_userfree_utf16_free(url_cef);
+            return null_mut();
+        }
+
         if classification.is_ad_related {
             logging::log_blocked("BLOCKED AD", &method, &url);
             // No response capturing for now to avoid segfaults
             cef_string_userfree_utf16_free(url_cef);
-            return null();
+            return null_mut();
         }
 
         let result = if CONFIG.denylist.is_match(&url) {
             logging::log_blocked("BLOCKED CONFIG", &method, &url);
-            null()
+            null_mut()
         } else {
             logging::log_allowed("ALLOWED", &method, &url);
             REAL_CEF_URLREQUEST_CREATE(request, client, request_context)
