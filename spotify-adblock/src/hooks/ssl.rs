@@ -112,9 +112,11 @@ fn should_block_ssl_request(data: &[u8]) -> Option<String> {
         path.contains("/EndAd") ||
         path.contains("/AdDecision") ||
         // Skip limits
-        path.contains("skip-limit") ||
-        path.contains("skip_limit") ||
-        path.contains("/playback/restrictions") ||
+        (is_spotify_client_host && (
+            path.contains("skip-limit") ||
+            path.contains("skip_limit") ||
+            path.contains("/playback/restrictions")
+        )) ||
         rules::is_ad_related_url(&url);
 
     if is_ad_related {
@@ -184,5 +186,16 @@ mod tests {
             .is_none());
         assert!(should_block_ssl_request(&request("example.com", "/foo/partner-userid"))
             .is_none());
+        assert!(should_block_ssl_request(&request("example.com", "/playback/restrictions"))
+            .is_none());
+    }
+
+    #[test]
+    fn blocks_spotify_client_playback_restrictions_from_ssl() {
+        assert!(should_block_ssl_request(&request(
+            "spclient.wg.spotify.com",
+            "/playback/restrictions"
+        ))
+        .is_some());
     }
 }

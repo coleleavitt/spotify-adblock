@@ -60,9 +60,34 @@ fn ad_tracking_attribution(url: &str) -> bool {
 }
 
 fn ad_stream_reporting(url: &str) -> bool {
-    (url.contains("stream_reporting")
-        && (url.contains("ad") || url.contains("sponsor") || url.contains("promotion")))
-        || (url.contains("stream-reporting") && (url.contains("ad") || url.contains("sponsor")))
+    (url.contains("stream_reporting") || url.contains("stream-reporting"))
+        && stream_reporting_ad_marker(url)
+}
+
+fn stream_reporting_ad_marker(url: &str) -> bool {
+    contains_any(
+        url,
+        &[
+            "/ad/",
+            "/ads/",
+            "/ad-",
+            "/ad_",
+            "/ad.",
+            "_ad_",
+            "-ad-",
+            ".ad.",
+            ":ad:",
+            "ad-event",
+            "ad_event",
+            "adEvent",
+            "AdEvent",
+            "AdDecision",
+            "audio_ad",
+            "sponsor",
+            "promotion",
+            "promoted",
+        ],
+    )
 }
 
 fn legacy_ida_ad_signal(url: &str) -> bool {
@@ -113,5 +138,21 @@ mod tests {
     fn leaves_spotify_client_specific_routes_host_scoped() {
         assert!(!is_ida_ad_signal("https://example.com/v1/podcast/nextAdSegment"));
         assert!(!is_ida_ad_signal("https://example.com/foo/partner-userid"));
+    }
+
+    #[test]
+    fn stream_reporting_uses_explicit_ad_markers() {
+        assert!(is_ida_ad_signal(
+            "https://spclient.wg.spotify.com/stream_reporting/ad-event"
+        ));
+        assert!(is_ida_ad_signal(
+            "https://spclient.wg.spotify.com/stream-reporting/sponsor"
+        ));
+        assert!(!is_ida_ad_signal(
+            "https://spclient.wg.spotify.com/stream_reporting/metadata"
+        ));
+        assert!(!is_ida_ad_signal(
+            "https://spclient.wg.spotify.com/stream_reporting/download"
+        ));
     }
 }

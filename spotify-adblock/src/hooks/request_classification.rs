@@ -2,8 +2,6 @@
 
 use super::rules;
 
-const MAX_URL_LENGTH: usize = 2048;
-
 pub(super) struct UrlClassification {
     pub(super) is_discord_rpc: bool,
     pub(super) is_gabo: bool,
@@ -14,7 +12,6 @@ pub(super) struct UrlClassification {
 }
 
 pub(super) fn classify_url(url: &str, method: &str) -> UrlClassification {
-    let url = bounded_url(url);
     let is_gabo_event_post = is_gabo_event_post(url, method);
 
     UrlClassification {
@@ -25,18 +22,6 @@ pub(super) fn classify_url(url: &str, method: &str) -> UrlClassification {
         is_product_state: is_product_state(url),
         is_gabo_event_post,
     }
-}
-
-fn bounded_url(url: &str) -> &str {
-    if url.len() <= MAX_URL_LENGTH {
-        return url;
-    }
-
-    let mut cutoff = MAX_URL_LENGTH;
-    while !url.is_char_boundary(cutoff) {
-        cutoff -= 1;
-    }
-    &url[..cutoff]
 }
 
 fn is_discord_rpc(url: &str) -> bool {
@@ -71,17 +56,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn bounded_url_truncates_at_utf8_boundary() {
-        let url = format!("{}é", "a".repeat(MAX_URL_LENGTH - 1));
-
-        assert_eq!(bounded_url(&url), "a".repeat(MAX_URL_LENGTH - 1));
-    }
-
-    #[test]
     fn gabo_event_post_does_not_get_service_allowance() {
         let classification = classify_url("https://gabo-receiver-service.spotify.com/events", "POST");
 
         assert!(classification.is_gabo_event_post);
         assert!(!classification.is_gabo);
+    }
+
+    #[test]
+    fn classification_checks_ad_markers_after_long_prefix() {
+        let url = format!("https://spclient.wg.spotify.com/{}/ads/foo", "a".repeat(4096));
+        let classification = classify_url(&url, "GET");
+
+        assert!(classification.is_ad_related);
     }
 }

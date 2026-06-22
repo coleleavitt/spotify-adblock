@@ -28,7 +28,10 @@ fn logging_route(url: &str) -> bool {
 
 #[cfg(feature = "privacy-hard-blocking")]
 fn event_sender_route(url: &str) -> bool {
-    url.contains("event_sender") || url.contains("event-sender") || url.contains("Event-sender")
+    url.contains("event_sender")
+        || url.contains("event-sender")
+        || url.contains("EventSender")
+        || url.contains("Event-sender")
 }
 
 #[cfg(feature = "privacy-hard-blocking")]
@@ -78,6 +81,7 @@ mod tests {
         assert!(is_privacy_hard_url("hm://event-service/v1/events"));
         assert!(is_privacy_hard_url("sp://logging/v3/foo"));
         assert!(is_privacy_hard_url("spotify.event_sender.proto.EventCounters"));
+        assert!(is_privacy_hard_url("spotify.event_sender.proto.EventSender"));
         assert!(is_privacy_hard_url("spotify.pending_events.esperanto.proto.PendingEvents"));
         assert!(is_privacy_hard_url("spotify.stream_reporting_esperanto.proto.StreamReporting"));
         assert!(is_privacy_hard_url("spotify.remote_config.esperanto.proto.RemoteConfig"));

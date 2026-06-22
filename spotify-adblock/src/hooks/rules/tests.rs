@@ -17,3 +17,13 @@ fn ad_rules_cover_sponsored_and_ida_paths() {
         "https://spclient.wg.spotify.com/v1/podcast/nextAdSegment"
     ));
 }
+
+#[test]
+fn ad_rules_scope_playback_restrictions_to_spotify_client_hosts() {
+    assert!(is_ad_related_url(
+        "https://spclient.wg.spotify.com/playback/restrictions"
+    ));
+    assert!(!is_ad_related_url(
+        "https://example.com/playback/restrictions"
+    ));
+}

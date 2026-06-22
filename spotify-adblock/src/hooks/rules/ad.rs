@@ -1,5 +1,5 @@
 use super::ida;
-use super::matchers::contains_any;
+use super::matchers::{contains_any, is_spotify_client_url};
 use super::privacy;
 
 pub(in crate::hooks) fn is_ad_related_url(url: &str) -> bool {
@@ -143,13 +143,18 @@ fn skip_limit_or_restriction(url: &str) -> bool {
         &[
             "RemainingSkipsRequest",
             "RemainingSkipsResponse",
-            "skip-limit",
-            "skip_limit",
-            "/v1/me/player/skip-limits",
-            "/skip-counter",
-            "/playback/restrictions",
         ],
-    )
+    ) || (is_spotify_client_url(url)
+        && contains_any(
+            url,
+            &[
+                "skip-limit",
+                "skip_limit",
+                "/v1/me/player/skip-limits",
+                "/skip-counter",
+                "/playback/restrictions",
+            ],
+        ))
 }
 
 fn display_segment_ad(url: &str) -> bool {
