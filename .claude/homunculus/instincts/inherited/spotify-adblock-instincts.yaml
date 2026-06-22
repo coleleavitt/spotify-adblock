@@ -1,0 +1,280 @@
+# Instincts generated from https://github.com/coleleavitt/spotify-adblock
+# Generated: 2026-06-22T03:17:32.183Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: spotify-adblock-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Commit Length
+
+## Action
+
+Keep commit messages concise (~35 characters)
+
+## Evidence
+
+- Average commit message length: 35 chars
+- Based on 1 commits
+
+---
+id: spotify-adblock-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: spotify-adblock-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: spotify-adblock-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: spotify-adblock-arch-type-based
+trigger: "when adding new code"
+confidence: 0.8
+domain: architecture
+source: repo-analysis
+source_repo: https://github.com/coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Arch Type Based
+
+## Action
+
+Place code in the appropriate type folder (components/, services/, utils/, etc.)
+
+## Evidence
+
+- Type-based module organization detected
+- Folders: 
+
+---
+id: spotify-adblock-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: spotify-adblock-instinct-file-naming
+trigger: "When creating a new file"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Instinct File Naming
+
+## Action
+
+Name the file using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.files: camelCase
+
+---
+id: spotify-adblock-instinct-function-naming
+trigger: "When defining a function"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Instinct Function Naming
+
+## Action
+
+Name the function using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.functions: camelCase
+
+---
+id: spotify-adblock-instinct-class-naming
+trigger: "When defining a class or struct"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Instinct Class Naming
+
+## Action
+
+Name the class or struct using PascalCase
+
+## Evidence
+
+- Pattern in namingConventions.classes: PascalCase
+
+---
+id: spotify-adblock-instinct-constant-naming
+trigger: "When defining a constant"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Instinct Constant Naming
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE
+
+## Evidence
+
+- Pattern in namingConventions.constants: SCREAMING_SNAKE_CASE
+
+---
+id: spotify-adblock-instinct-import-style
+trigger: "When importing modules"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Instinct Import Style
+
+## Action
+
+Use relative import paths
+
+## Evidence
+
+- Pattern in importStyle: relative
+
+---
+id: spotify-adblock-instinct-export-style
+trigger: "When exporting modules or functions"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Instinct Export Style
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern in exportStyle: named
+
+---
+id: spotify-adblock-instinct-test-location
+trigger: "When adding or organizing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Instinct Test Location
+
+## Action
+
+Place tests in a separate folder from source code
+
+## Evidence
+
+- Pattern in testLocation: separate
+
+---
+id: spotify-adblock-instinct-commit-format
+trigger: "When writing a git commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: coleleavitt/spotify-adblock
+---
+
+# Spotify Adblock Instinct Commit Format
+
+## Action
+
+Use a short, freeform message without a prefix, around 35 characters
+
+## Evidence
+
+- commits.prefixes: []
+- commits.averageLength: 35
+- Example: 'Add privacy hard telemetry blocking'
+
