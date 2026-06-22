@@ -14,6 +14,8 @@ use crate::config::DEBUG_MODE;
 use crate::hook;
 use crate::utils::logging;
 
+use super::rules;
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct SSL {
@@ -85,11 +87,13 @@ fn should_block_ssl_request(data: &[u8]) -> Option<String> {
         host.contains("branch.io") ||
         host.contains("adjust.com") ||
         path.contains("/partner_user_id") ||
+        path.contains("partner-userid") ||
         // Podcast ad networks
         host.contains("megaphone.fm") ||
         host.contains("art19.com") ||
         host.contains("chartable.com") ||
         host.contains("podsights.com") ||
+        path.contains("nextAdSegment") ||
         // Display ad segments
         (path.contains("display-segments") && path.contains("sponsor")) ||
         // Ad event reporting
@@ -99,7 +103,8 @@ fn should_block_ssl_request(data: &[u8]) -> Option<String> {
         // Skip limits
         path.contains("skip-limit") ||
         path.contains("skip_limit") ||
-        path.contains("/playback/restrictions");
+        path.contains("/playback/restrictions") ||
+        rules::is_privacy_hard_url(&url);
 
     if is_ad_related {
         Some(format!("{method} {url}"))

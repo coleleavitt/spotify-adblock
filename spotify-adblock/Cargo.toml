@@ -23,6 +23,10 @@ cef-sys = { path = "../cef-sys" }
 name = "spotifyadblock"
 crate-type = ["cdylib"]
 
+[features]
+default = []
+privacy-hard-blocking = []
+
 # Inherit workspace lints
 [lints]
 workspace = true
