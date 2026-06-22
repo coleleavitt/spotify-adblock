@@ -1,4 +1,4 @@
-use super::matchers::contains_any;
+use super::matchers::{contains_any, is_spotify_client_url};
 
 pub(super) fn is_ida_ad_signal(url: &str) -> bool {
     ad_event_reporting(url)
@@ -14,6 +14,7 @@ fn ad_event_reporting(url: &str) -> bool {
     url.contains("audio_ad_event_reporter")
         || url.contains("/AdEvent")
         || url.contains("/EndAd")
+        || url.contains("/AdDecision")
         || url.contains("/AdDecisionEvent")
         || url.contains("/AdRequestEvent")
         || url.contains("/AdTransparencyEvent")
@@ -23,7 +24,7 @@ fn ad_event_reporting(url: &str) -> bool {
 fn podcast_ad_segment(url: &str) -> bool {
     url.contains("/PodcastAdSegment")
         || url.contains("/GetNextAdSegment")
-        || url.contains("nextAdSegment")
+        || (is_spotify_client_url(url) && url.contains("nextAdSegment"))
         || url.contains("AdSegmentsMetadataReceived")
 }
 
@@ -46,10 +47,16 @@ fn ad_tracking_attribution(url: &str) -> bool {
     url.contains("/branch_io")
         || url.contains("/branchIo")
         || url.contains("branch-io")
-        || url.contains("/partner_user_id")
-        || url.contains("/partner-user-id")
-        || url.contains("partner-userid")
-        || url.contains("partnerUserId")
+        || (is_spotify_client_url(url)
+            && contains_any(
+                url,
+                &[
+                    "/partner_user_id",
+                    "/partner-user-id",
+                    "partner-userid",
+                    "partnerUserId",
+                ],
+            ))
 }
 
 fn ad_stream_reporting(url: &str) -> bool {
@@ -93,9 +100,18 @@ mod tests {
 
     #[test]
     fn detects_ida_ad_misses_when_present() {
-        assert!(is_ida_ad_signal("/v1/podcast/nextAdSegment"));
+        assert!(is_ida_ad_signal(
+            "https://spclient.wg.spotify.com/v1/podcast/nextAdSegment"
+        ));
         assert!(is_ida_ad_signal(
             "https://spclient.wg.spotify.com/foo/partner-userid/encrypted/bar"
         ));
+        assert!(is_ida_ad_signal("/AdDecision"));
+    }
+
+    #[test]
+    fn leaves_spotify_client_specific_routes_host_scoped() {
+        assert!(!is_ida_ad_signal("https://example.com/v1/podcast/nextAdSegment"));
+        assert!(!is_ida_ad_signal("https://example.com/foo/partner-userid"));
     }
 }

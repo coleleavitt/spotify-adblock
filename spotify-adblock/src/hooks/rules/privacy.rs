@@ -20,11 +20,7 @@ fn privacy_hard_telemetry(url: &str) -> bool {
 
 #[cfg(feature = "privacy-hard-blocking")]
 fn logging_route(url: &str) -> bool {
-    url.contains("hm://event-service/v1/events")
-        || url.contains("/event-service/v1/events")
-        || url.contains("sp://logging/v1/")
-        || url.contains("sp://logging/v2/")
-        || url.contains("sp://logging/v3/")
+    url.contains("/event-service/v1/events")
         || url.contains("/logging/v1/")
         || url.contains("/logging/v2/")
         || url.contains("/logging/v3/")
@@ -32,10 +28,7 @@ fn logging_route(url: &str) -> bool {
 
 #[cfg(feature = "privacy-hard-blocking")]
 fn event_sender_route(url: &str) -> bool {
-    url.contains("event_sender")
-        || url.contains("event-sender")
-        || url.contains("Event-sender")
-        || url.contains("/Event-sender/")
+    url.contains("event_sender") || url.contains("event-sender") || url.contains("Event-sender")
 }
 
 #[cfg(feature = "privacy-hard-blocking")]

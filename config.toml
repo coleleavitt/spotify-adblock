@@ -133,5 +133,6 @@ denylist = [
     '.*pubads\.google\.com/ad.*',
     '.*googleads\..*',
     '.*adswizz\..*',
-    '.*/v1/podcast/nextAdSegment.*',
+    'https://spclient\.wg\.spotify\.com/v1/podcast/nextAdSegment.*',
+    'https://[^/]*-spclient\.spotify\.com/v1/podcast/nextAdSegment.*',
 ]

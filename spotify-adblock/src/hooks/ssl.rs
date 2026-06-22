@@ -26,6 +26,14 @@ static SSL_VERBOSE: LazyLock<AtomicBool> = LazyLock::new(|| AtomicBool::new(fals
 
 const MAX_INSPECT_LEN: usize = 4096;
 
+fn is_spotify_client_host(host: &str) -> bool {
+    let host = host.strip_suffix(":443").unwrap_or(host);
+    host.eq_ignore_ascii_case("spclient.wg.spotify.com")
+        || host
+            .get(host.len().saturating_sub("-spclient.spotify.com".len())..)
+            .is_some_and(|tail| tail.eq_ignore_ascii_case("-spclient.spotify.com"))
+}
+
 fn should_block_ssl_request(data: &[u8]) -> Option<String> {
     let header_len = data
         .windows(4)
@@ -54,6 +62,7 @@ fn should_block_ssl_request(data: &[u8]) -> Option<String> {
         .map_or("unknown", |line| line[5..].trim());
 
     let url = format!("https://{host}{path}");
+    let is_spotify_client_host = is_spotify_client_host(host);
 
     // Ad blocking patterns - endpoints that bypass CEF
     let is_ad_related =
@@ -86,14 +95,16 @@ fn should_block_ssl_request(data: &[u8]) -> Option<String> {
         // Partner/attribution tracking
         host.contains("branch.io") ||
         host.contains("adjust.com") ||
-        path.contains("/partner_user_id") ||
-        path.contains("partner-userid") ||
+        (is_spotify_client_host && (
+            path.contains("/partner_user_id") ||
+            path.contains("partner-userid")
+        )) ||
         // Podcast ad networks
         host.contains("megaphone.fm") ||
         host.contains("art19.com") ||
         host.contains("chartable.com") ||
         host.contains("podsights.com") ||
-        path.contains("nextAdSegment") ||
+        (is_spotify_client_host && path.contains("nextAdSegment")) ||
         // Display ad segments
         (path.contains("display-segments") && path.contains("sponsor")) ||
         // Ad event reporting
@@ -104,7 +115,7 @@ fn should_block_ssl_request(data: &[u8]) -> Option<String> {
         path.contains("skip-limit") ||
         path.contains("skip_limit") ||
         path.contains("/playback/restrictions") ||
-        rules::is_privacy_hard_url(&url);
+        rules::is_ad_related_url(&url);
 
     if is_ad_related {
         Some(format!("{method} {url}"))
@@ -148,4 +159,30 @@ pub fn enable_verbose_logging() {
 #[allow(dead_code)]
 pub fn disable_verbose_logging() {
     SSL_VERBOSE.store(false, Ordering::Relaxed);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn request(host: &str, path: &str) -> Vec<u8> {
+        format!("GET {path} HTTP/1.1\r\nHost: {host}\r\n\r\n").into_bytes()
+    }
+
+    #[test]
+    fn blocks_ida_spotify_client_routes_from_ssl() {
+        assert!(should_block_ssl_request(&request(
+            "spclient.wg.spotify.com",
+            "/v1/podcast/nextAdSegment"
+        ))
+        .is_some());
+    }
+
+    #[test]
+    fn leaves_spotify_client_routes_host_scoped() {
+        assert!(should_block_ssl_request(&request("example.com", "/v1/podcast/nextAdSegment"))
+            .is_none());
+        assert!(should_block_ssl_request(&request("example.com", "/foo/partner-userid"))
+            .is_none());
+    }
 }
