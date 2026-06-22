@@ -118,6 +118,7 @@ denylist = [
     'https://spclient\.wg\.spotify\.com/.*/partner/.*',
     'https://api-partner\.spotify\.com/promotion/.*',
     'https://open\.spotify\.com/promotion/.*',
+    'https://spclient\.wg\.spotify\.com/.*/partner-userid/encrypted/.*',
 
     # Display segments (sponsored playlist banners, "presented by" banners)
     'https://spclient\.wg\.spotify\.com/display-segments/.*',
@@ -132,4 +133,6 @@ denylist = [
     '.*pubads\.google\.com/ad.*',
     '.*googleads\..*',
     '.*adswizz\..*',
+    'https://spclient\.wg\.spotify\.com/v1/podcast/nextAdSegment.*',
+    'https://[^/]*-spclient\.spotify\.com/v1/podcast/nextAdSegment.*',
 ]

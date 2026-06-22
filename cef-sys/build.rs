@@ -1,6 +1,6 @@
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn main() {
     let cef_root =
@@ -53,7 +53,7 @@ fn main() {
 
     // Create wrapper header that includes all CEF C API headers
     let wrapper_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("cef_wrapper.h");
-    let wrapper_content = create_wrapper_header();
+    let wrapper_content = create_wrapper_header(&cef_path);
     fs::write(&wrapper_path, wrapper_content).expect("Failed to write wrapper header");
 
     // Generate bindings with correct include paths
@@ -98,92 +98,105 @@ fn main() {
     println!("CEF bindings generated successfully!");
 }
 
-fn create_wrapper_header() -> String {
-    // Use the correct include paths that work with CEF's directory structure
-    r#"
+fn create_wrapper_header(cef_path: &Path) -> String {
+    const CEF_CAPI_HEADERS: &[&str] = &[
+        "include/capi/cef_base_capi.h",
+        "include/capi/cef_app_capi.h",
+        "include/capi/cef_client_capi.h",
+        "include/capi/cef_browser_capi.h",
+        "include/capi/cef_browser_process_handler_capi.h",
+        "include/capi/cef_render_process_handler_capi.h",
+        "include/capi/cef_life_span_handler_capi.h",
+        "include/capi/cef_load_handler_capi.h",
+        "include/capi/cef_display_handler_capi.h",
+        "include/capi/cef_context_menu_handler_capi.h",
+        "include/capi/cef_dialog_handler_capi.h",
+        "include/capi/cef_download_handler_capi.h",
+        "include/capi/cef_drag_handler_capi.h",
+        "include/capi/cef_find_handler_capi.h",
+        "include/capi/cef_focus_handler_capi.h",
+        "include/capi/cef_frame_handler_capi.h",
+        "include/capi/cef_jsdialog_handler_capi.h",
+        "include/capi/cef_keyboard_handler_capi.h",
+        "include/capi/cef_permission_handler_capi.h",
+        "include/capi/cef_print_handler_capi.h",
+        "include/capi/cef_render_handler_capi.h",
+        "include/capi/cef_request_handler_capi.h",
+        "include/capi/cef_resource_request_handler_capi.h",
+        "include/capi/cef_request_capi.h",
+        "include/capi/cef_response_capi.h",
+        "include/capi/cef_urlrequest_capi.h",
+        "include/capi/cef_cookie_capi.h",
+        "include/capi/cef_request_context_capi.h",
+        "include/capi/cef_request_context_handler_capi.h",
+        "include/capi/cef_resource_handler_capi.h",
+        "include/capi/cef_response_filter_capi.h",
+        "include/capi/cef_scheme_capi.h",
+        "include/capi/cef_command_line_capi.h",
+        "include/capi/cef_process_message_capi.h",
+        "include/capi/cef_values_capi.h",
+        "include/capi/cef_frame_capi.h",
+        "include/capi/cef_image_capi.h",
+        "include/capi/cef_menu_model_capi.h",
+        "include/capi/cef_dom_capi.h",
+        "include/capi/cef_v8_capi.h",
+        "include/capi/cef_callback_capi.h",
+        "include/capi/cef_task_capi.h",
+        "include/capi/cef_thread_capi.h",
+        "include/capi/cef_waitable_event_capi.h",
+        "include/capi/cef_trace_capi.h",
+        "include/capi/cef_file_util_capi.h",
+        "include/capi/cef_path_util_capi.h",
+        "include/capi/cef_process_util_capi.h",
+        "include/capi/cef_stream_capi.h",
+        "include/capi/cef_string_visitor_capi.h",
+        "include/capi/cef_zip_reader_capi.h",
+        "include/capi/cef_xml_reader_capi.h",
+        "include/capi/cef_accessibility_handler_capi.h",
+        "include/capi/cef_audio_handler_capi.h",
+        "include/capi/cef_auth_callback_capi.h",
+        "include/capi/cef_command_handler_capi.h",
+        "include/capi/cef_component_updater_capi.h",
+        "include/capi/cef_devtools_message_observer_capi.h",
+        "include/capi/cef_download_item_capi.h",
+        "include/capi/cef_drag_data_capi.h",
+        "include/capi/cef_i18n_util_capi.h",
+        "include/capi/cef_media_router_capi.h",
+        "include/capi/cef_menu_model_delegate_capi.h",
+        "include/capi/cef_navigation_entry_capi.h",
+        "include/capi/cef_origin_whitelist_capi.h",
+        "include/capi/cef_parser_capi.h",
+        "include/capi/cef_preference_capi.h",
+        "include/capi/cef_print_settings_capi.h",
+        "include/capi/cef_registration_capi.h",
+        "include/capi/cef_resource_bundle_capi.h",
+        "include/capi/cef_resource_bundle_handler_capi.h",
+        "include/capi/cef_server_capi.h",
+        "include/capi/cef_shared_memory_region_capi.h",
+        "include/capi/cef_shared_process_message_builder_capi.h",
+        "include/capi/cef_ssl_info_capi.h",
+        "include/capi/cef_ssl_status_capi.h",
+        "include/capi/cef_task_manager_capi.h",
+        "include/capi/cef_unresponsive_process_callback_capi.h",
+        "include/capi/cef_x509_certificate_capi.h",
+        "include/capi/cef_crash_util_capi.h",
+    ];
+
+    let mut wrapper = String::from(
+        r#"
 // CEF C API Wrapper Header for Rust Bindings
 
 // Include all main CEF C API headers using paths relative to CEF root
-#include "include/capi/cef_base_capi.h"
-#include "include/capi/cef_app_capi.h"
-#include "include/capi/cef_client_capi.h"
-#include "include/capi/cef_browser_capi.h"
-#include "include/capi/cef_browser_process_handler_capi.h"
-#include "include/capi/cef_render_process_handler_capi.h"
-#include "include/capi/cef_life_span_handler_capi.h"
-#include "include/capi/cef_load_handler_capi.h"
-#include "include/capi/cef_display_handler_capi.h"
-#include "include/capi/cef_context_menu_handler_capi.h"
-#include "include/capi/cef_dialog_handler_capi.h"
-#include "include/capi/cef_download_handler_capi.h"
-#include "include/capi/cef_drag_handler_capi.h"
-#include "include/capi/cef_find_handler_capi.h"
-#include "include/capi/cef_focus_handler_capi.h"
-#include "include/capi/cef_frame_handler_capi.h"
-#include "include/capi/cef_jsdialog_handler_capi.h"
-#include "include/capi/cef_keyboard_handler_capi.h"
-#include "include/capi/cef_permission_handler_capi.h"
-#include "include/capi/cef_print_handler_capi.h"
-#include "include/capi/cef_render_handler_capi.h"
-#include "include/capi/cef_request_handler_capi.h"
-#include "include/capi/cef_resource_request_handler_capi.h"
-#include "include/capi/cef_request_capi.h"
-#include "include/capi/cef_response_capi.h"
-#include "include/capi/cef_urlrequest_capi.h"
-#include "include/capi/cef_cookie_capi.h"
-#include "include/capi/cef_request_context_capi.h"
-#include "include/capi/cef_request_context_handler_capi.h"
-#include "include/capi/cef_resource_handler_capi.h"
-#include "include/capi/cef_response_filter_capi.h"
-#include "include/capi/cef_scheme_capi.h"
-#include "include/capi/cef_command_line_capi.h"
-#include "include/capi/cef_process_message_capi.h"
-#include "include/capi/cef_values_capi.h"
-#include "include/capi/cef_frame_capi.h"
-#include "include/capi/cef_image_capi.h"
-#include "include/capi/cef_menu_model_capi.h"
-#include "include/capi/cef_dom_capi.h"
-#include "include/capi/cef_v8_capi.h"
-#include "include/capi/cef_callback_capi.h"
-#include "include/capi/cef_task_capi.h"
-#include "include/capi/cef_thread_capi.h"
-#include "include/capi/cef_waitable_event_capi.h"
-#include "include/capi/cef_trace_capi.h"
-#include "include/capi/cef_file_util_capi.h"
-#include "include/capi/cef_path_util_capi.h"
-#include "include/capi/cef_process_util_capi.h"
-#include "include/capi/cef_stream_capi.h"
-#include "include/capi/cef_string_visitor_capi.h"
-#include "include/capi/cef_zip_reader_capi.h"
-#include "include/capi/cef_xml_reader_capi.h"
-#include "include/capi/cef_accessibility_handler_capi.h"
-#include "include/capi/cef_audio_handler_capi.h"
-#include "include/capi/cef_auth_callback_capi.h"
-#include "include/capi/cef_command_handler_capi.h"
-#include "include/capi/cef_component_updater_capi.h"
-#include "include/capi/cef_devtools_message_observer_capi.h"
-#include "include/capi/cef_download_item_capi.h"
-#include "include/capi/cef_drag_data_capi.h"
-#include "include/capi/cef_i18n_util_capi.h"
-#include "include/capi/cef_media_router_capi.h"
-#include "include/capi/cef_menu_model_delegate_capi.h"
-#include "include/capi/cef_navigation_entry_capi.h"
-#include "include/capi/cef_origin_whitelist_capi.h"
-#include "include/capi/cef_parser_capi.h"
-#include "include/capi/cef_preference_capi.h"
-#include "include/capi/cef_print_settings_capi.h"
-#include "include/capi/cef_registration_capi.h"
-#include "include/capi/cef_resource_bundle_capi.h"
-#include "include/capi/cef_resource_bundle_handler_capi.h"
-#include "include/capi/cef_server_capi.h"
-#include "include/capi/cef_shared_memory_region_capi.h"
-#include "include/capi/cef_shared_process_message_builder_capi.h"
-#include "include/capi/cef_ssl_info_capi.h"
-#include "include/capi/cef_ssl_status_capi.h"
-#include "include/capi/cef_task_manager_capi.h"
-#include "include/capi/cef_unresponsive_process_callback_capi.h"
-#include "include/capi/cef_x509_certificate_capi.h"
-#include "include/capi/cef_crash_util_capi.h"
-"#
-    .to_string()
+"#,
+    );
+
+    for header in CEF_CAPI_HEADERS {
+        if cef_path.join(header).exists() {
+            wrapper.push_str("#include \"");
+            wrapper.push_str(header);
+            wrapper.push_str("\"\n");
+        }
+    }
+
+    wrapper
 }

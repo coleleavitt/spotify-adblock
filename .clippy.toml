@@ -5,7 +5,7 @@
 max-struct-bools = 10
 
 # Set MSRV to ensure compatibility
-msrv = "1.75.0"
+msrv = "1.85.0"
 
 # Configure literal format options
 unreadable-literal-lint-fractions = false

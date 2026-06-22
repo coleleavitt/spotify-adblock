@@ -59,6 +59,14 @@ $ export CEF_ROOT="$PWD/cef_binary_150.0.1+g3f36c80+chromium-150.0.7871.4_linux6
 $ cargo build --release --lib
 ```
 
+**Privacy hard build:**
+```bash
+$ export CEF_ROOT="$PWD/cef_binary_150.0.1+g3f36c80+chromium-150.0.7871.4_linux64_beta"
+$ cargo build --release --lib -p spotify-adblock --features privacy-hard-blocking
+```
+
+This opt-in feature also blocks broad Spotify telemetry routes found in the IDA dump, including event-service, logging, event sender, pending events, stream reporting, remote config, and common capping traffic. It may affect Wrapped, listening history, recommendations, or diagnostics.
+
 ## Install
 ```bash
 # Using traditional Make
