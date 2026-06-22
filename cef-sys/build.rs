@@ -1,10 +1,10 @@
 use std::env;
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 
 fn main() {
-    let cef_root = env::var("CEF_ROOT")
-        .expect("CEF_ROOT environment variable must be set to the CEF distribution path");
+    let cef_root =
+        env::var("CEF_ROOT").expect("CEF_ROOT environment variable must be set to the CEF distribution path");
 
     let cef_path = PathBuf::from(&cef_root);
 
@@ -62,42 +62,30 @@ fn main() {
         // CRITICAL: Add CEF root to include path so relative includes work
         .clang_arg(format!("-I{cef_root}"))
         .clang_arg(format!("-I{cef_root}/include"))
-
         // Allow all CEF functions, types, and constants
         .allowlist_function("cef_.*")
         .allowlist_type("cef_.*")
         .allowlist_var("CEF_.*")
         .allowlist_var("cef_.*")
-
         // Block some problematic items
         .blocklist_type("max_align_t")
         .blocklist_function("bindgen_test_layout_.*")
-
         // Handle different calling conventions
-        .default_enum_style(bindgen::EnumVariation::Rust {
-            non_exhaustive: false,
-        })
-
+        .default_enum_style(bindgen::EnumVariation::Rust { non_exhaustive: false })
         // Generate comments for documentation
         .generate_comments(true)
-
         // REMOVED: .ctypes_prefix() - use bindgen's default ctypes behavior
         // This will use std::os::raw::c_int, etc. instead of std::ffi::c_int
-
         // Handle size_t and other types properly
         .size_t_is_usize(true)
-
         // Generate Debug implementations
         .derive_debug(true)
         .derive_default(true)
         .derive_copy(true)
-
         // Handle function pointers properly
         .trust_clang_mangling(false)
-
         // Parse callbacks for additional processing
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-
         .generate()
         .expect("Unable to generate CEF bindings");
 
@@ -144,6 +132,7 @@ fn create_wrapper_header() -> String {
 #include "include/capi/cef_urlrequest_capi.h"
 #include "include/capi/cef_cookie_capi.h"
 #include "include/capi/cef_request_context_capi.h"
+#include "include/capi/cef_request_context_handler_capi.h"
 #include "include/capi/cef_resource_handler_capi.h"
 #include "include/capi/cef_response_filter_capi.h"
 #include "include/capi/cef_scheme_capi.h"
@@ -171,6 +160,7 @@ fn create_wrapper_header() -> String {
 #include "include/capi/cef_audio_handler_capi.h"
 #include "include/capi/cef_auth_callback_capi.h"
 #include "include/capi/cef_command_handler_capi.h"
+#include "include/capi/cef_component_updater_capi.h"
 #include "include/capi/cef_devtools_message_observer_capi.h"
 #include "include/capi/cef_download_item_capi.h"
 #include "include/capi/cef_drag_data_capi.h"
@@ -194,5 +184,6 @@ fn create_wrapper_header() -> String {
 #include "include/capi/cef_unresponsive_process_callback_capi.h"
 #include "include/capi/cef_x509_certificate_capi.h"
 #include "include/capi/cef_crash_util_capi.h"
-"#.to_string()
+"#
+    .to_string()
 }

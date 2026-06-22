@@ -86,10 +86,27 @@ denylist = [
     'https://spclient\.wg\.spotify\.com/ad-logic/.*',
     'https://spclient\.wg\.spotify\.com/adlogic/.*',
 
+    # LEAVEBEHIND ADS (Recent Ads section on playlists/podcasts)
+    # Endpoint is /podcast-ap4p/leavebehind (singular, no trailing slash)
+    'https://spclient\.wg\.spotify\.com/podcast-ap4p/leavebehind.*',
+    'https://.*-spclient\.spotify\.com/podcast-ap4p/leavebehind.*',
+
+    # Sponsored playlists
+    'https://spclient\.wg\.spotify\.com/sponsoredplaylist/.*',
+    'https://.*-spclient\.spotify\.com/sponsoredplaylist/.*',
+
+    # Ad tracking pixel
+    'https://aet\.spotify\.com/.*',
+
     # CRITICAL: Gabo ad delivery (selective blocking)
     'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*/advertisement',
     'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*/ad-opportunity',
     'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*/adlogic',
+    'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*/v3/events/.*',
+    'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*/public/v3/events/.*',
+    'https://spclient\.wg\.spotify\.com/gabo-receiver-service/v3/events/.*',
+    'https://spclient\.wg\.spotify\.com/gabo-receiver-service/public/v3/events/.*',
+    'sp://ads/v1/ads/.*',
 
     # Skip limit enforcement
     'https://spclient\.wg\.spotify\.com/.*/RemainingSkipsRequest',
@@ -100,6 +117,7 @@ denylist = [
     'https://spclient\.wg\.spotify\.com/.*/promotion/.*',
     'https://spclient\.wg\.spotify\.com/.*/partner/.*',
     'https://api-partner\.spotify\.com/promotion/.*',
+    'https://open\.spotify\.com/promotion/.*',
 
     # Display segments (sponsored playlist banners, "presented by" banners)
     'https://spclient\.wg\.spotify\.com/display-segments/.*',
@@ -111,6 +129,7 @@ denylist = [
 
     # Analytics and tracking
     '.*doubleclick\.net/.*',
+    '.*pubads\.google\.com/ad.*',
     '.*googleads\..*',
     '.*adswizz\..*',
 ]

@@ -1,5 +1,4 @@
 use crate::config::CONFIG;
-use lazy_static::lazy_static;
 use libc::{addrinfo, c_char, EAI_FAIL};
 use std::ffi::CStr;
 
@@ -28,11 +27,13 @@ fn is_allowed_domain(domain: &str) -> bool {
 }
 
 hook! {
-    getaddrinfo(node: *const c_char, service: *const c_char, hints: *const addrinfo, res: *const *const addrinfo) -> i32 => REAL_GETADDRINFO {
+    getaddrinfo(node: *const c_char, service: *const c_char, hints: *const addrinfo, res: *mut *mut addrinfo) -> i32 => REAL_GETADDRINFO {
         // Bound-checked extraction of domain string
         let domain = if node.is_null() {
             ""
         } else {
+            // SAFETY: Category 8 - FFI boundary. `getaddrinfo` receives a
+            // NUL-terminated hostname pointer from libc callers when non-null.
             unsafe { CStr::from_ptr(node) }.to_str().unwrap_or("")
         };
 

@@ -1,5 +1,4 @@
-use cef_sys::cef_string_userfree_utf16_t;  // Changed from crate::cef
-use lazy_static::lazy_static;
+use cef_sys::cef_string_userfree_utf16_t;
 
 use crate::hook;
 

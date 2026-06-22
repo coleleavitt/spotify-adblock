@@ -4,7 +4,7 @@ script = '''
 # Check if CEF_ROOT is set, if not try to detect it locally
 if [ -z "$CEF_ROOT" ]; then
     # Look for CEF binary in project directory
-    CEF_DIR=$(find . -maxdepth 1 -type d -name "cef_binary_*" | head -n 1)
+    CEF_DIR=$(find . -maxdepth 1 -type d -name "cef_binary_*" | sort -V | tail -n 1)
     if [ -n "$CEF_DIR" ]; then
         export CEF_ROOT="$PWD/$CEF_DIR"
         echo "Found CEF at: $CEF_ROOT"

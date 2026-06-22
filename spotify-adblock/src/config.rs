@@ -1,15 +1,11 @@
-use lazy_static::lazy_static;
 use regex::RegexSet;
 use serde::Deserialize;
-use std::{env, fs::read_to_string, path::PathBuf};
+use std::{env, fs::read_to_string, path::PathBuf, sync::LazyLock};
 
 // Constants for fault containment
 const MAX_CONFIG_SIZE: usize = 1024 * 1024; // 1MB limit for config
 
-/// Debug mode enabled via environment variable
-lazy_static! {
-    pub static ref DEBUG_MODE: bool = env::var("SPOTIFY_ADBLOCK_DEBUG").is_ok();
-}
+pub static DEBUG_MODE: LazyLock<bool> = LazyLock::new(|| env::var("SPOTIFY_ADBLOCK_DEBUG").is_ok());
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
@@ -19,9 +15,7 @@ pub struct Config {
     pub denylist: RegexSet,
 }
 
-lazy_static! {
-    pub static ref CONFIG: Config = load_config();
-}
+pub static CONFIG: LazyLock<Config> = LazyLock::new(load_config);
 
 /// Load configuration from multiple potential locations with fault tolerance
 fn load_config() -> Config {

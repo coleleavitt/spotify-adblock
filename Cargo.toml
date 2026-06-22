@@ -17,10 +17,9 @@ toml = "0.9.8"
 bindgen = "0.72.1"
 cc = "1.0"
 
-# THIS SECTION WAS MISSING - ADD IT:
 [workspace.package]
 authors = ["coleleavitt"]
-edition = "2024"  # Changed from "2024" to "2021"
+edition = "2024"
 license = "MIT"
 repository = "https://github.com/coleleavitt/spotify-adblock"
 rust-version = "1.85"
