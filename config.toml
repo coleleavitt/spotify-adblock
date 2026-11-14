@@ -56,6 +56,7 @@ allowlist = [
     'audio-fa\.spotifycdn\.com', # audio
     'mixed-media-images\.spotifycdn\.com', # mix images
     'seed-mix-image\.spotifycdn\.com', # mix images
+    'open\.spotifycdn\.com', # CDN assets (easter eggs, videos, fonts; ad templates blocked in denylist)
     'api\.spreaker\.com', # podcasts
     'download\.ted\.com', # podcasts
     'www\.youtube\.com', # YouTube (Spicetify Reddit app)
@@ -90,6 +91,10 @@ denylist = [
     # Endpoint is /podcast-ap4p/leavebehind (singular, no trailing slash)
     'https://spclient\.wg\.spotify\.com/podcast-ap4p/leavebehind.*',
     'https://.*-spclient\.spotify\.com/podcast-ap4p/leavebehind.*',
+
+    # Ad display templates (1.3.8 iframe-based HPTO/leaderboard ads)
+    'https://open\.spotifycdn\.com/cdn/templates/display\.html.*',
+    'https://open\.spotifycdn\.com/cdn/templates/leaderboard\.html.*',
 
     # Sponsored playlists
     'https://spclient\.wg\.spotify\.com/sponsoredplaylist/.*',

@@ -30,6 +30,9 @@ fn is_discord_rpc(url: &str) -> bool {
         || url.contains("presence")
         || url.contains("/presence2/")
         || url.contains("connect-state")
+        || url.contains("super-connect")
+        || url.contains("social-connect")
+        || url.contains("social-prompting")
         || url.contains("rpc")
 }
 
@@ -69,5 +72,37 @@ mod tests {
         let classification = classify_url(&url, "GET");
 
         assert!(classification.is_ad_related);
+    }
+
+    #[test]
+    fn super_connect_proxy_classified_as_discord_rpc() {
+        let classification = classify_url(
+            "https://spclient.wg.spotify.com/super-connect-proxy/v1/agent/online-state",
+            "GET",
+        );
+
+        assert!(classification.is_discord_rpc);
+        assert!(!classification.is_ad_related);
+    }
+
+    #[test]
+    fn social_connect_classified_as_discord_rpc() {
+        let classification = classify_url(
+            "https://spclient.wg.spotify.com/social-connect/v3/sessions/join",
+            "POST",
+        );
+
+        assert!(classification.is_discord_rpc);
+        assert!(!classification.is_ad_related);
+    }
+
+    #[test]
+    fn social_prompting_classified_as_discord_rpc() {
+        let classification = classify_url(
+            "hm://social-prompting/v1/session-update",
+            "GET",
+        );
+
+        assert!(classification.is_discord_rpc);
     }
 }

@@ -16,6 +16,8 @@ fn privacy_hard_telemetry(url: &str) -> bool {
         || stream_reporting_route(url)
         || remote_config_route(url)
         || common_capping_route(url)
+        || telemetry_turn_route(url)
+        || playback_event_route(url)
 }
 
 #[cfg(feature = "privacy-hard-blocking")]
@@ -63,6 +65,18 @@ fn common_capping_route(url: &str) -> bool {
         || url.contains("ConsumptionEvent")
 }
 
+#[cfg(feature = "privacy-hard-blocking")]
+fn telemetry_turn_route(url: &str) -> bool {
+    url.contains("telemetry/turn-termination")
+        || url.contains("telemetry_turn_termination")
+}
+
+#[cfg(feature = "privacy-hard-blocking")]
+fn playback_event_route(url: &str) -> bool {
+    url.contains("media_playback_event")
+        || url.contains("media-playback-event")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -86,5 +100,11 @@ mod tests {
         assert!(is_privacy_hard_url("spotify.stream_reporting_esperanto.proto.StreamReporting"));
         assert!(is_privacy_hard_url("spotify.remote_config.esperanto.proto.RemoteConfig"));
         assert!(is_privacy_hard_url("commoncapping/consumptionevent"));
+        assert!(is_privacy_hard_url(
+            "https://spclient.wg.spotify.com/v1/telemetry/turn-termination"
+        ));
+        assert!(is_privacy_hard_url(
+            "https://spclient.wg.spotify.com/v1/msg/media_playback_event_v2"
+        ));
     }
 }

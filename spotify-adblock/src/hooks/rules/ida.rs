@@ -19,6 +19,10 @@ fn ad_event_reporting(url: &str) -> bool {
         || url.contains("/AdRequestEvent")
         || url.contains("/AdTransparencyEvent")
         || url.contains("/AdDetectionResult")
+        || url.contains("/templates/display.html")
+        || url.contains("/templates/leaderboard.html")
+        || url.contains("admocker.spotify.com")
+        || url.contains("video-takeover")
 }
 
 fn podcast_ad_segment(url: &str) -> bool {
@@ -101,6 +105,7 @@ fn legacy_ida_ad_signal(url: &str) -> bool {
             "open.spotify.com/promotion/",
             "contains_sponsored_content",
             "SponsoredContentListenerPayload",
+            "SponsoredContentDisclosure",
             "PODCAST_SPONSORED_CONTENT",
             "slot_has_active_ad",
             "slot_fetching_turned_off",
@@ -112,6 +117,7 @@ fn legacy_ida_ad_signal(url: &str) -> bool {
             "fire_impression_on_end",
             "tracking_events",
             "trackingEvents",
+            "SponsorshipClientFetchEvent",
             "PROMO_V1_TRAIT",
             "PROMO_V3_TRAIT",
             "AUDIOBOOK_PROMOTION",
@@ -154,5 +160,21 @@ mod tests {
         assert!(!is_ida_ad_signal(
             "https://spclient.wg.spotify.com/stream_reporting/download"
         ));
+    }
+
+    #[test]
+    fn detects_1_3_8_ad_patterns() {
+        assert!(is_ida_ad_signal(
+            "https://open.spotifycdn.com/cdn/templates/display.html"
+        ));
+        assert!(is_ida_ad_signal(
+            "https://open.spotifycdn.com/cdn/templates/leaderboard.html"
+        ));
+        assert!(is_ida_ad_signal(
+            "https://admocker.spotify.com/mock/ad?test_case=foo"
+        ));
+        assert!(is_ida_ad_signal("SponsoredContentDisclosure"));
+        assert!(is_ida_ad_signal("SponsorshipClientFetchEvent"));
+        assert!(is_ida_ad_signal("video-takeover"));
     }
 }
