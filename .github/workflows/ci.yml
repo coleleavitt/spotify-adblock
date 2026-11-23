@@ -1,0 +1,152 @@
+name: ci
+
+# One pipeline for every push, PR and release:
+#
+#   fmt ──┐
+#   clippy├──> publish   (main only, when Cargo.toml's version has no v<version> tag yet)
+#   test ─┘
+#
+# `test` also builds both release libraries; `publish` ships those exact
+# files, so nothing is rebuilt or retested for a release. To release, bump
+# [workspace.package] version in Cargo.toml and push to main, or run the
+# `release` workflow, which commits the bump and then calls this one.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to build and release
+        type: string
+        required: true
+
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || inputs.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: -D warnings
+  REF: ${{ inputs.ref || github.sha }}
+
+jobs:
+  fmt:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          show-progress: false
+          ref: ${{ env.REF }}
+
+      # rustfmt.toml uses nightly-only options (imports_layout, group_imports).
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - name: rustfmt
+        run: cargo fmt --all --check
+
+      - name: version
+        id: version
+        run: |
+          version=$(sh ci/verify-version.sh)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          release=false
+          if [ "$GITHUB_EVENT_NAME" != pull_request ] && [ "$GITHUB_REF" = refs/heads/main ]; then
+            if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null; then
+              echo "v$version is already released"
+            else
+              release=true
+            fi
+          fi
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
+  clippy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          show-progress: false
+          ref: ${{ env.REF }}
+
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: clippy
+
+      - name: clippy (default features)
+        run: cargo clippy --locked --workspace --all-targets -- -A clippy::not_unsafe_ptr_arg_deref -A clippy::missing_panics_doc -A unused_unsafe -A unsafe_code
+
+      - name: clippy (privacy-hard-blocking)
+        run: cargo clippy --locked --workspace --all-targets --all-features -- -A clippy::not_unsafe_ptr_arg_deref -A clippy::missing_panics_doc -A unused_unsafe -A unsafe_code
+
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          show-progress: false
+          ref: ${{ env.REF }}
+
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: test
+
+      - name: test (default features)
+        run: cargo test --locked --workspace --all-targets
+
+      - name: test (privacy-hard-blocking)
+        run: cargo test --locked --workspace --all-targets --all-features
+
+      # The second build only recompiles spotify-adblock itself.
+      - name: build release libraries
+        run: |
+          mkdir dist
+          cargo build --locked --release
+          cp target/release/libspotifyadblock.so dist/spotify-adblock-x86_64-linux.so
+          cargo build --locked --release --features spotify-adblock/privacy-hard-blocking
+          cp target/release/libspotifyadblock.so dist/spotify-adblock-privacy-hard-x86_64-linux.so
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: libraries
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    needs: [fmt, clippy, test]
+    if: needs.fmt.outputs.release == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          show-progress: false
+          ref: ${{ env.REF }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: libraries
+          path: dist
+
+      - name: assemble release
+        run: |
+          cp config.toml install.sh dist/
+          cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.fmt.outputs.version }}
+          target_commitish: ${{ env.REF }}
+          name: v${{ needs.fmt.outputs.version }}
+          generate_release_notes: true
+          make_latest: true
+          files: dist/*
+          fail_on_unmatched_files: true

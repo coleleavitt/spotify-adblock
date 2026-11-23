@@ -1,45 +1,37 @@
 name: release
 
-# Releases are cut from the version in Cargo.toml ([workspace.package] version).
-#
-#   * Bump the version in Cargo.toml and push to main: this workflow builds,
-#     tests and publishes v<version> (skipped when that tag already exists).
-#   * Or run it by hand (Actions > release > Run workflow) with a version:
-#     it commits the bump to main, then releases it.
+# Actions > release > Run workflow: commits the version bump to main, then runs
+# the ci pipeline on that commit, which publishes v<version> once it passes.
+# (A push made with GITHUB_TOKEN does not trigger workflows, so ci is called
+# here instead of running twice.)
 
 on:
-  push:
-    branches: [main]
-    paths: [Cargo.toml]
   workflow_dispatch:
     inputs:
       version:
-        description: Version to release, e.g. 2.1.0 (empty releases the version already in Cargo.toml)
-        required: false
+        description: Version to release, e.g. 2.1.0
+        required: true
 
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
-  prepare:
+  bump:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      sha: ${{ steps.version.outputs.sha }}
-      release: ${{ steps.version.outputs.release }}
+      sha: ${{ steps.commit.outputs.sha }}
     steps:
       - uses: actions/checkout@v6
         with:
           show-progress: false
-          fetch-depth: 0
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Bump version
-        if: inputs.version != ''
+      - name: commit version bump
+        id: commit
         env:
           VERSION: ${{ inputs.version }}
         run: |
@@ -47,77 +39,18 @@ jobs:
             echo "error: '$VERSION' is not a semver version" >&2; exit 1; }
           sed -i "/^\[workspace.package\]/,/^\[/ s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
           cargo update --workspace
-          git diff --quiet && { echo "Cargo.toml is already at $VERSION"; exit 0; }
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "Release v$VERSION"
-          git push origin HEAD:${{ github.ref_name }}
-
-      - name: Resolve version
-        id: version
-        run: |
-          version=$(sh ci/verify-version.sh)
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null; then
-            echo "v$version already exists, nothing to release"
-            echo "release=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "release=true" >> "$GITHUB_OUTPUT"
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -am "Release v$VERSION"
+            git push origin HEAD:${{ github.ref_name }}
           fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-  build:
-    needs: prepare
-    if: needs.prepare.outputs.release == 'true'
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          show-progress: false
-          ref: ${{ needs.prepare.outputs.sha }}
-
-      - uses: ./.github/actions/setup
-        with:
-          cache-key: release
-
-      - name: Test
-        run: |
-          cargo test --locked --workspace --release
-          cargo test --locked --workspace --release --all-features
-
-      - name: Build
-        run: |
-          mkdir dist
-          cargo build --locked --release
-          cp target/release/libspotifyadblock.so dist/spotify-adblock-x86_64-linux.so
-          cargo build --locked --release --features spotify-adblock/privacy-hard-blocking
-          cp target/release/libspotifyadblock.so dist/spotify-adblock-privacy-hard-x86_64-linux.so
-          cp config.toml install.sh dist/
-          cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: dist
-          path: dist/
-          if-no-files-found: error
-
-  publish:
-    needs: [prepare, build]
-    runs-on: ubuntu-24.04
+  ci:
+    needs: bump
     permissions:
       contents: write
-    steps:
-      - uses: actions/download-artifact@v8
-        with:
-          name: dist
-          path: dist
-
-      - uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.prepare.outputs.version }}
-          target_commitish: ${{ needs.prepare.outputs.sha }}
-          name: v${{ needs.prepare.outputs.version }}
-          generate_release_notes: true
-          make_latest: true
-          files: dist/*
-          fail_on_unmatched_files: true
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.bump.outputs.sha }}

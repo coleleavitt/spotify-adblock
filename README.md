@@ -86,8 +86,8 @@ it in `/usr/local/lib/spotify-adblock.so` and `/etc/spotify-adblock/config.toml`
 The version lives only in `Cargo.toml` (`[workspace.package] version`). Either:
 
 * bump it, commit and push to `main`, or
-* run **Actions → release → Run workflow** with the new version (the workflow commits the bump).
+* run **Actions → release → Run workflow** with the new version (it commits the bump for you).
 
-The `release` workflow then tests and builds both variants and publishes `v<version>` with the
-libraries, `config.toml`, `install.sh` and `SHA256SUMS`. `ci/verify-version.sh` fails CI if
-`Cargo.lock` or a tag disagrees with that version.
+Either way the `ci` pipeline runs fmt, clippy and the tests. Once all three pass on `main`, it publishes
+`v<version>` with the two libraries the test job built, plus `config.toml`, `install.sh` and
+`SHA256SUMS`. `ci/verify-version.sh` fails the pipeline if `Cargo.lock` or a tag disagrees with that version.
