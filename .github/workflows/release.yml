@@ -1,113 +1,121 @@
 name: release
 
+# Releases are cut from the version in Cargo.toml ([workspace.package] version).
+#
+#   * Bump the version in Cargo.toml and push to main: this workflow builds,
+#     tests and publishes v<version> (skipped when that tag already exists).
+#   * Or run it by hand (Actions > release > Run workflow) with a version:
+#     it commits the bump to main, then releases it.
+
 on:
-  release:
-    types:
-      - created
+  push:
+    branches: [main]
+    paths: [Cargo.toml]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release, e.g. 2.1.0 (empty releases the version already in Cargo.toml)
+        required: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  prepare:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      sha: ${{ steps.version.outputs.sha }}
+      release: ${{ steps.version.outputs.release }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libx11-dev \
-            libxcomposite-dev \
-            libxcursor-dev \
-            libxdamage-dev \
-            libxext-dev \
-            libxfixes-dev \
-            libxi-dev \
-            libxrandr-dev \
-            libxrender-dev \
-            libxss-dev \
-            libxtst-dev \
-            libxkbcommon-dev \
-            libpango1.0-dev \
-            libcairo2-dev \
-            libgtk-3-dev \
-            libglib2.0-dev \
-            libatk1.0-dev \
-            libgdk-pixbuf-2.0-dev \
-            libnss3-dev \
-            libnspr4-dev \
-            libasound2-dev \
-            libcups2-dev \
-            libdbus-1-dev
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v6
         with:
-          components: clippy
+          show-progress: false
+          fetch-depth: 0
 
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@stable
 
-      - name: Install cargo-make
-        uses: davidB/rust-cargo-make@v1
-
-      - name: Cache CEF binary
-        id: cache-cef
-        uses: actions/cache@v4
-        with:
-          path: cef_binary_*.tar.bz2
-          key: cef-137.0.19-g8a1c4ce-chromium-137.0.7151.121-linux64
-
-      - name: Download and extract CEF binary
+      - name: Bump version
+        if: inputs.version != ''
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          CEF_VERSION="137.0.19+g8a1c4ce+chromium-137.0.7151.121"
-          CEF_PACKAGE="cef_binary_${CEF_VERSION}_linux64"
-          CEF_URL="https://cef-builds.spotifycdn.com/cef_binary_137.0.19%2Bg8a1c4ce%2Bchromium-137.0.7151.121_linux64.tar.bz2"
+          echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' || {
+            echo "error: '$VERSION' is not a semver version" >&2; exit 1; }
+          sed -i "/^\[workspace.package\]/,/^\[/ s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
+          cargo update --workspace
+          git diff --quiet && { echo "Cargo.toml is already at $VERSION"; exit 0; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Release v$VERSION"
+          git push origin HEAD:${{ github.ref_name }}
 
-          if [ ! -f "${CEF_PACKAGE}.tar.bz2" ]; then
-            echo "Downloading CEF binary..."
-            curl -L -f -o "${CEF_PACKAGE}.tar.bz2" "${CEF_URL}" || {
-              echo "Failed to download CEF. Trying to fetch available versions..."
-              curl -s "https://cef-builds.spotifycdn.com/index.json" | grep -o '"cef_version":"[^"]*137[^"]*"' | head -5
-              exit 1
-            }
+      - name: Resolve version
+        id: version
+        run: |
+          version=$(sh ci/verify-version.sh)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null; then
+            echo "v$version already exists, nothing to release"
+            echo "release=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Using cached CEF binary"
+            echo "release=true" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "Extracting CEF binary..."
-          tar -xjf "${CEF_PACKAGE}.tar.bz2"
+  build:
+    needs: prepare
+    if: needs.prepare.outputs.release == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          show-progress: false
+          ref: ${{ needs.prepare.outputs.sha }}
 
-          echo "CEF_ROOT=$PWD/${CEF_PACKAGE}" >> $GITHUB_ENV
-          echo "CEF extracted to: $PWD/${CEF_PACKAGE}"
+      - uses: ./.github/actions/setup
 
-      - name: Safety verification
-        run: cargo clippy -- -A clippy::not_unsafe_ptr_arg_deref -A clippy::missing_panics_doc -A unused_unsafe -A unsafe_code -D warnings
-
-      - name: Build release binary
-        env:
-          CEF_ROOT: ${{ env.CEF_ROOT }}
-        run: cargo build --release
-
-      - name: Strip binary for size optimization
-        run: strip target/release/libspotifyadblock.so
-
-      - name: Generate checksums
+      - name: Test
         run: |
-          cd target/release
-          sha256sum libspotifyadblock.so > spotify-adblock.sha256
+          cargo test --locked --workspace --release
+          cargo test --locked --workspace --release --all-features
 
-      - name: Attach binary to release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            target/release/libspotifyadblock.so
-            target/release/spotify-adblock.sha256
+      - name: Build
+        run: |
+          mkdir dist
+          cargo build --locked --release
+          cp target/release/libspotifyadblock.so dist/spotify-adblock-x86_64-linux.so
+          cargo build --locked --release --features spotify-adblock/privacy-hard-blocking
+          cp target/release/libspotifyadblock.so dist/spotify-adblock-privacy-hard-x86_64-linux.so
+          cp config.toml install.sh dist/
+          cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS
 
-      - name: Upload to release assets
-        uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v7
         with:
-          name: spotify-adblock-release
-          path: |
-            target/release/libspotifyadblock.so
-            target/release/spotify-adblock.sha256
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.prepare.outputs.version }}
+          target_commitish: ${{ needs.prepare.outputs.sha }}
+          name: v${{ needs.prepare.outputs.version }}
+          generate_release_notes: true
+          make_latest: true
+          files: dist/*
+          fail_on_unmatched_files: true

@@ -1,0 +1,61 @@
+name: Set up build environment
+description: Install system libraries, the Rust toolchain and the current stable CEF binary distribution (exports CEF_ROOT).
+
+inputs:
+  cef-channel:
+    description: CEF channel to build against (stable or beta)
+    default: stable
+
+runs:
+  using: composite
+  steps:
+    - name: Install system dependencies
+      shell: bash
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y \
+          libx11-dev libxcomposite-dev libxcursor-dev libxdamage-dev libxext-dev \
+          libxfixes-dev libxi-dev libxrandr-dev libxrender-dev libxss-dev libxtst-dev \
+          libxkbcommon-dev libpango1.0-dev libcairo2-dev libgtk-3-dev libglib2.0-dev \
+          libatk1.0-dev libgdk-pixbuf-2.0-dev libnss3-dev libnspr4-dev libasound2-dev \
+          libcups2-dev libdbus-1-dev
+
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+
+    - uses: Swatinem/rust-cache@v2
+
+    - name: Resolve CEF binary
+      id: resolve-cef
+      shell: bash
+      env:
+        CEF_PLATFORM: linux64
+        CEF_CHANNEL: ${{ inputs.cef-channel }}
+        CEF_FILE_TYPE: standard
+      run: |
+        python3 "$GITHUB_WORKSPACE/.github/scripts/resolve-cef.py" > "$RUNNER_TEMP/cef.env"
+
+        cat "$RUNNER_TEMP/cef.env" >> "$GITHUB_OUTPUT"
+        cat "$RUNNER_TEMP/cef.env"
+
+    - name: Cache CEF binary
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.resolve-cef.outputs.archive }}
+        key: cef-${{ steps.resolve-cef.outputs.archive }}
+
+    - name: Download and extract CEF binary
+      shell: bash
+      env:
+        CEF_ARCHIVE: ${{ steps.resolve-cef.outputs.archive }}
+        CEF_PACKAGE: ${{ steps.resolve-cef.outputs.package }}
+        CEF_URL: ${{ steps.resolve-cef.outputs.url }}
+        CEF_SHA1: ${{ steps.resolve-cef.outputs.sha1 }}
+      run: |
+        if [ ! -f "$CEF_ARCHIVE" ]; then
+          curl -L -f --retry 3 --retry-delay 5 -o "$CEF_ARCHIVE" "$CEF_URL"
+        fi
+        echo "$CEF_SHA1  $CEF_ARCHIVE" | sha1sum -c -
+        tar -xjf "$CEF_ARCHIVE"
+        echo "CEF_ROOT=$PWD/$CEF_PACKAGE" >> "$GITHUB_ENV"

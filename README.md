@@ -1,187 +1,93 @@
 # spotify-adblock
 
-Spotify adblocker for Linux (macOS untested) that works by wrapping `getaddrinfo` and `cef_urlrequest_create`. It blocks requests to domains that are not on the allowlist, as well as URLs that are on the denylist.
+Ad blocker for the Spotify desktop client on Linux. It is an `LD_PRELOAD` library that hooks
+`getaddrinfo` and `cef_urlrequest_create` and blocks ad, upsell and (optionally) telemetry
+requests before they leave the client.
 
-## Recent Updates
-
-* Now compatible with Rust 2024 edition
-* Complete codebase restructuring with modular architecture for better maintainability
-* Implemented JPL safety standards with radiation hardening and fault containment
-* Improved code safety with explicit unsafe blocks and triple modular redundancy
-* Enhanced blocking of ad-related endpoints
-* Support for cargo-make build system alongside traditional Makefile
-
-### Notes
-* This **does not** work with the snap Spotify package.
-* This **might not** work with the Flatpak Spotify package, depending on your system's shared libraries' versions.
-* On Debian-based distributions (e.g. Ubuntu), the Debian Spotify package can be installed by following the instructions at the bottom of [this page](https://www.spotify.com/us/download/linux/). *(recommended)*
-
-## Build
-Prerequisites:
-* Git
-* Make or cargo-make
-* Rust 1.75+ (supports 2024 edition)
-* [Cargo](https://doc.rust-lang.org/cargo/)
-* CEF (Chromium Embedded Framework) binary - automatically downloaded in CI/CD
-
-### Download CEF Binary (Local Development)
-```bash
-# Download CEF binary for your platform from Spotify's CDN
-wget https://cef-builds.spotifycdn.com/cef_binary_150.0.1%2Bg3f36c80%2Bchromium-150.0.7871.4_linux64_beta.tar.bz2
-tar -xjf cef_binary_150.0.1+g3f36c80+chromium-150.0.7871.4_linux64_beta.tar.bz2
-```
-
-### Build Options
-
-**Using debug_run.sh (Recommended for Development):**
-```bash
-$ git clone https://github.com/coleleavitt/spotify-adblock.git
-$ cd spotify-adblock
-# Download CEF binary first (see above)
-$ ./debug_run.sh
-```
-
-**Using traditional Make:**
-```bash
-$ export CEF_ROOT="$PWD/cef_binary_150.0.1+g3f36c80+chromium-150.0.7871.4_linux64_beta"
-$ make
-```
-
-**Using cargo-make (install with: cargo install cargo-make):**
-```bash
-# cargo-make will auto-detect CEF in project directory
-$ cargo make build
-```
-
-**Manual build with cargo:**
-```bash
-$ export CEF_ROOT="$PWD/cef_binary_150.0.1+g3f36c80+chromium-150.0.7871.4_linux64_beta"
-$ cargo build --release --lib
-```
-
-**Privacy hard build:**
-```bash
-$ export CEF_ROOT="$PWD/cef_binary_150.0.1+g3f36c80+chromium-150.0.7871.4_linux64_beta"
-$ cargo build --release --lib -p spotify-adblock --features privacy-hard-blocking
-```
-
-This opt-in feature also blocks broad Spotify telemetry routes found in the IDA dump, including event-service, logging, event sender, pending events, stream reporting, remote config, and common capping traffic. It may affect Wrapped, listening history, recommendations, or diagnostics.
+Works with the official Spotify package (deb/AUR/Gentoo, `/opt/spotify` or `/usr/share/spotify`).
+It does **not** work with the Snap package.
 
 ## Install
-```bash
-# Using traditional Make
-$ sudo make install
 
-# Using cargo-make
-$ sudo cargo make install
-```
-
-#### Flatpak
-```bash
-$ mkdir -p ~/.spotify-adblock && cp target/release/libspotifyadblock.so ~/.spotify-adblock/spotify-adblock.so
-$ mkdir -p ~/.var/app/com.spotify.Client/config/spotify-adblock && cp config.toml ~/.var/app/com.spotify.Client/config/spotify-adblock
-$ flatpak override --user --filesystem="~/.spotify-adblock/spotify-adblock.so" --filesystem="~/.config/spotify-adblock/config.toml" com.spotify.Client
-```
-
-## Usage
-### Command-line
-```bash
-$ LD_PRELOAD=/usr/local/lib/spotify-adblock.so spotify
-```
-
-#### Debug Mode
-You can enable debug mode to see all requests (blocked and allowed) by setting the `SPOTIFY_ADBLOCK_DEBUG` environment variable:
-
-```bash
-$ SPOTIFY_ADBLOCK_DEBUG=1 LD_PRELOAD=/usr/local/lib/spotify-adblock.so spotify
-```
-
-#### Flatpak
-```bash
-$ flatpak run --command=sh com.spotify.Client -c 'eval "$(sed s#LD_PRELOAD=#LD_PRELOAD=$HOME/.spotify-adblock/spotify-adblock.so:#g /app/bin/spotify)"'
-```
-
-### Desktop file
-You can integrate it with your desktop environment by creating a `.desktop` file (e.g. `spotify-adblock.desktop`) in `~/.local/share/applications`. This lets you easily run it from an application launcher without opening a terminal.
-
-Examples:
-
-<details> 
-  <summary>Debian Package</summary>
-  <p>
-
-```desktop
-[Desktop Entry]
-Type=Application
-Name=Spotify (adblock)
-GenericName=Music Player
-Icon=spotify-client
-TryExec=spotify
-Exec=env LD_PRELOAD=/usr/local/lib/spotify-adblock.so spotify %U
-Terminal=false
-MimeType=x-scheme-handler/spotify;
-Categories=Audio;Music;Player;AudioVideo;
-StartupWMClass=spotify
-```
-  </p>
-</details>
-
-<details>
-  <summary>Flatpak</summary>
-  <p>
-
-```desktop
-[Desktop Entry]
-Type=Application
-Name=Spotify (adblock)
-GenericName=Music Player
-Icon=com.spotify.Client
-Exec=flatpak run --file-forwarding --command=sh com.spotify.Client -c 'eval "$(sed s#LD_PRELOAD=#LD_PRELOAD=$HOME/.spotify-adblock/spotify-adblock.so:#g /app/bin/spotify)"' @@u %U @@
-Terminal=false
-MimeType=x-scheme-handler/spotify;
-Categories=Audio;Music;Player;AudioVideo;
-StartupWMClass=spotify
-```
-  </p>
-</details>
-
-## Uninstall
 ```sh
-# Using traditional Make
-$ sudo make uninstall
-
-# Using cargo-make
-$ sudo cargo make uninstall
+curl -fsSL https://raw.githubusercontent.com/coleleavitt/spotify-adblock/main/install.sh | sh
 ```
 
-#### Flatpak
+This installs, for your user only:
+
+| File | Purpose |
+| --- | --- |
+| `~/.local/lib/spotify-adblock/libspotifyadblock.so` | the preload library |
+| `~/.config/spotify-adblock/config.toml` | allowlist and denylist |
+| `~/.local/bin/spotify-adblock` | launcher: runs `spotify` with the library preloaded |
+| `~/.local/share/applications/spotify-adblock.desktop` | "Spotify (adblock)" in your app launcher |
+
+Then start Spotify with `spotify-adblock` (or from the launcher). Re-run the same command to update.
+
+Options go after `sh -s --`:
+
 ```sh
-$ rm -r ~/.spotify-adblock ~/.config/spotify-adblock
-$ flatpak override --user --reset com.spotify.Client
+curl -fsSL .../install.sh | sh -s -- --privacy-hard    # also block telemetry (see below)
+curl -fsSL .../install.sh | sh -s -- --version 2.0.0   # a specific release
+curl -fsSL .../install.sh | sh -s -- --uninstall
 ```
+
+`--prefix DIR`, `--keep-config` and `--force` are described in `install.sh --help`. The launcher honours
+`SPOTIFY_BIN` (Spotify executable) and `SPOTIFY_ADBLOCK_LIB` (library path).
+
+### Privacy-hard build
+
+`--privacy-hard` installs a build that also blocks Spotify's event-service, logging, event sender,
+pending events, stream reporting, remote config and common-capping traffic. Wrapped, listening
+history and recommendations may suffer.
+
+### Flatpak
+
+```sh
+curl -fsSL .../install.sh | sh
+flatpak override --user --filesystem=~/.local/lib/spotify-adblock:ro --filesystem=~/.config/spotify-adblock:ro com.spotify.Client
+flatpak run --command=sh com.spotify.Client -c 'eval "$(sed s#LD_PRELOAD=#LD_PRELOAD=$HOME/.local/lib/spotify-adblock/libspotifyadblock.so:#g /app/bin/spotify)"'
+```
+
+It may fail if the Flatpak runtime's glibc is older than 2.34.
 
 ## Configuration
-The allowlist and denylist can be configured in a config file located at (in descending order of precedence):
-* `config.toml` in the working directory
-* `$XDG_CONFIG_HOME/spotify-adblock/config.toml`
-* `~/.config/spotify-adblock/config.toml`
-* `/etc/spotify-adblock/config.toml` *(default)*
 
-## How It Works
+`config.toml` is read from, in order: `./config.toml`, `$XDG_CONFIG_HOME/spotify-adblock/config.toml`
+(default `~/.config/...`), `/etc/spotify-adblock/config.toml`.
 
-The adblocker uses two main strategies to block ads:
-1. **Domain filtering**: Uses the `getaddrinfo` hook to block connections to domains not on the allowlist
-2. **URL filtering**: Uses the `cef_urlrequest_create` hook to block URLs on the denylist
+* `allowlist`: regexes of hostnames `getaddrinfo` may resolve (`*.spotify.com` is always allowed).
+* `denylist`: regexes of URLs `cef_urlrequest_create` refuses.
 
-Special categories automatically handled:
-* Discord RPC connections (allowed)
-* Dealer/websocket connections (allowed)
-* Ad-related endpoints (blocked)
+Built-in rules (`spotify-adblock/src/hooks/rules/`) block known ad, sponsorship and in-app upsell
+endpoints regardless of the config.
 
-## Safety Features
+Set `SPOTIFY_ADBLOCK_DEBUG=1` to log every request instead of blocking. Run `spotify-adblock` from a
+terminal to see the `[+]` allowed and `[-]` blocked lines.
 
-This project now implements several safety features following JPL coding standards:
-* Triple modular redundancy for critical functions
-* Bounded execution with memory limits
-* Explicit unsafe blocks with proper error handling
-* Overflow checks and fault containment
+## Build from source
+
+Building needs Rust 1.85+ and a [CEF binary distribution](https://cef-builds.spotifycdn.com/index.html)
+(for the C headers):
+
+```sh
+git clone https://github.com/coleleavitt/spotify-adblock && cd spotify-adblock
+curl -LO https://cef-builds.spotifycdn.com/cef_binary_<version>_linux64.tar.bz2 && tar xjf cef_binary_*.tar.bz2
+export CEF_ROOT=$PWD/$(ls -d cef_binary_*/ | head -1)
+cargo build --release                                              # target/release/libspotifyadblock.so
+cargo build --release --features spotify-adblock/privacy-hard-blocking
+```
+
+Then run `LD_PRELOAD=$PWD/target/release/libspotifyadblock.so spotify`, or `sudo make install` to put
+it in `/usr/local/lib/spotify-adblock.so` and `/etc/spotify-adblock/config.toml`.
+
+## Releasing
+
+The version lives only in `Cargo.toml` (`[workspace.package] version`). Either:
+
+* bump it, commit and push to `main`, or
+* run **Actions → release → Run workflow** with the new version (the workflow commits the bump).
+
+The `release` workflow then tests and builds both variants and publishes `v<version>` with the
+libraries, `config.toml`, `install.sh` and `SHA256SUMS`. `ci/verify-version.sh` fails CI if
+`Cargo.lock` or a tag disagrees with that version.

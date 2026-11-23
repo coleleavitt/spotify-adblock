@@ -1,6 +1,5 @@
 target/
 include/
-Cargo.lock
 .idea/
 .claude/
 .codegraph/

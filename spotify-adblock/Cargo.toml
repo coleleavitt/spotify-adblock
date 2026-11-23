@@ -1,5 +1,6 @@
 [package]
 name = "spotify-adblock"
+version.workspace = true
 authors.workspace = true
 description = "Adblocker for Spotify"
 edition.workspace = true
