@@ -7,7 +7,6 @@ pub(super) struct UrlClassification {
     pub(super) is_gabo: bool,
     pub(super) is_dealer: bool,
     pub(super) is_ad_related: bool,
-    pub(super) is_product_state: bool,
     pub(super) is_gabo_event_post: bool,
 }
 
@@ -19,7 +18,6 @@ pub(super) fn classify_url(url: &str, method: &str) -> UrlClassification {
         is_gabo: is_allowed_gabo_service(url) && !is_gabo_event_post,
         is_dealer: url.contains("dealer"),
         is_ad_related: rules::is_ad_related_url(url),
-        is_product_state: is_product_state(url),
         is_gabo_event_post,
     }
 }
@@ -50,9 +48,6 @@ fn is_gabo_event_post(url: &str, method: &str) -> bool {
     url.contains("gabo-receiver-service") && url.contains("/events") && method == "POST"
 }
 
-fn is_product_state(url: &str) -> bool {
-    url.contains("product_state") || url.contains("product-state")
-}
 
 #[cfg(test)]
 mod tests {

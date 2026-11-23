@@ -1,13 +1,10 @@
 name: Set up build environment
-description: Install system libraries, the Rust toolchain and the current stable CEF binary distribution (exports CEF_ROOT).
+description: Install system libraries, the Rust toolchain and the CEF version pinned in .cef-version (exports CEF_ROOT).
 
 inputs:
   cache-key:
     description: Swatinem/rust-cache shared-key, one per job so jobs do not evict each other
     default: build
-  cef-channel:
-    description: CEF channel to build against (stable or beta)
-    default: stable
 
 runs:
   using: composite
@@ -39,8 +36,7 @@ runs:
       shell: bash
       env:
         CEF_PLATFORM: linux64
-        CEF_CHANNEL: ${{ inputs.cef-channel }}
-        CEF_FILE_TYPE: standard
+        CEF_FILE_TYPE: minimal
       run: |
         python3 "$GITHUB_WORKSPACE/.github/scripts/resolve-cef.py" > "$RUNNER_TEMP/cef.env"
 

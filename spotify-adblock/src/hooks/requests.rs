@@ -1,37 +1,16 @@
-use std::{ptr::null_mut, slice::from_raw_parts};
+use std::ptr::null_mut;
 
 use cef_sys::{
-    _cef_request_context_t, _cef_request_t, _cef_urlrequest_client_t, cef_string_userfree_utf16_t, cef_urlrequest_t,
+    _cef_request_context_t, _cef_request_t, _cef_urlrequest_client_t, cef_urlrequest_t,
 };
 
-use crate::config::{CONFIG, DEBUG_MODE};
+use crate::config::DEBUG_MODE;
 use crate::hook;
 use crate::hooks::memory::cef_string_userfree_utf16_free;
 use crate::utils::logging;
 
-use super::request_classification::classify_url;
-
-fn cef_userfree_utf16_to_string(value: cef_string_userfree_utf16_t) -> Option<String> {
-    if value.is_null() {
-        return None;
-    }
-
-    // SAFETY: Category 8 - FFI boundary. `value` is a non-null CEF userfree
-    // string pointer returned by the request API for the duration of this call.
-    let cef_string = unsafe { &*value };
-    if cef_string.length == 0 {
-        return Some(String::new());
-    }
-
-    if cef_string.str_.is_null() {
-        return None;
-    }
-
-    // SAFETY: Category 10 - out-of-bounds. CEF reports `length` UTF-16 code
-    // units for the non-null `str_` pointer in this userfree string.
-    let utf16 = unsafe { from_raw_parts(cef_string.str_, cef_string.length) };
-    Some(String::from_utf16_lossy(utf16))
-}
+use super::cef_string::cef_userfree_utf16_to_string;
+use super::decision::{Verdict, decide};
 
 hook! {
     cef_urlrequest_create(request: *mut _cef_request_t, client: *mut _cef_urlrequest_client_t, request_context: *mut _cef_request_context_t) -> *mut cef_urlrequest_t => REAL_CEF_URLREQUEST_CREATE {
@@ -77,10 +56,7 @@ hook! {
         };
         cef_string_userfree_utf16_free(method_cef);
 
-        // Classify URL using fault-contained function
-        let classification = classify_url(&url, &method);
-
-        // Debug mode handling
+        // Debug mode logs everything and blocks nothing.
         if *DEBUG_MODE {
             logging::log_debug(&format!("{method} {url}"));
             let result = REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
@@ -88,45 +64,15 @@ hook! {
             return result;
         }
 
-        // Decision logic with proper cleanup in all paths
-
-        // Monitor product state checks (informational)
-        if classification.is_product_state {
-            logging::log_debug(&format!("PRODUCT STATE CHECK: {method} {url}"));
-        }
-
-        if classification.is_discord_rpc {
-            logging::log_allowed("DISCORD RPC", &method, &url);
-            let result = REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
-            cef_string_userfree_utf16_free(url_cef);
-            return result;
-        } else if classification.is_gabo || classification.is_dealer {
-            logging::log_allowed("SERVICE", &method, &url);
-            let result = REAL_CEF_URLREQUEST_CREATE(request, client, request_context);
-            cef_string_userfree_utf16_free(url_cef);
-            return result;
-        }
-
-        // Block aggressive Gabo POST events (payload might contain ad data)
-        if classification.is_gabo_event_post {
-            logging::log_blocked("BLOCKED GABO POST", &method, &url);
-            cef_string_userfree_utf16_free(url_cef);
-            return null_mut();
-        }
-
-        if classification.is_ad_related {
-            logging::log_blocked("BLOCKED AD", &method, &url);
-            // No response capturing for now to avoid segfaults
-            cef_string_userfree_utf16_free(url_cef);
-            return null_mut();
-        }
-
-        let result = if CONFIG.denylist.is_match(&url) {
-            logging::log_blocked("BLOCKED CONFIG", &method, &url);
-            null_mut()
-        } else {
-            logging::log_allowed("ALLOWED", &method, &url);
-            REAL_CEF_URLREQUEST_CREATE(request, client, request_context)
+        let result = match decide(&url, &method) {
+            Verdict::Block(reason) => {
+                logging::log_blocked(reason, &method, &url);
+                null_mut()
+            }
+            Verdict::Allow(reason) => {
+                logging::log_allowed(reason, &method, &url);
+                REAL_CEF_URLREQUEST_CREATE(request, client, request_context)
+            }
         };
 
         cef_string_userfree_utf16_free(url_cef);

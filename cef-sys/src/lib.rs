@@ -34,7 +34,9 @@
 include!(concat!(env!("OUT_DIR"), "/cef_bindings.rs"));
 
 // CEF library version information
-pub const CEF_VERSION_MAJOR: u32 = 150;
+/// Must match the CEF that Spotify ships (see `.cef-version`): struct layouts are
+/// version-specific, and Spotify selects `CEF_API_VERSION_EXPERIMENTAL`.
+pub const CEF_VERSION_MAJOR: u32 = 146;
 
 /// Helper function to check if CEF is initialized
 ///

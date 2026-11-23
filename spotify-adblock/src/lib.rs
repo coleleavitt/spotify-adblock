@@ -46,4 +46,4 @@ macro_rules! hook {
 pub use hooks::memory::cef_string_userfree_utf16_free;
 pub use hooks::network::getaddrinfo;
 pub use hooks::requests::cef_urlrequest_create;
-pub use hooks::ssl::SSL_write;
+pub use hooks::scheme::{cef_initialize, cef_request_context_create_context};
