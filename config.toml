@@ -109,10 +109,10 @@ denylist = [
     'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*/advertisement',
     'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*/ad-opportunity',
     'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*/adlogic',
-    'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*/v3/events/.*',
-    'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*/public/v3/events/.*',
-    'https://spclient\.wg\.spotify\.com/gabo-receiver-service/v3/events/.*',
-    'https://spclient\.wg\.spotify\.com/gabo-receiver-service/public/v3/events/.*',
+    'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*/v3/events.*',
+    'https://spclient\.wg\.spotify\.com/gabo-receiver-service/.*/public/v3/events.*',
+    'https://spclient\.wg\.spotify\.com/gabo-receiver-service/v3/events.*',
+    'https://spclient\.wg\.spotify\.com/gabo-receiver-service/public/v3/events.*',
     'sp://ads/v1/ads/.*',
 
     # In-app messaging upsell modals ("Get 2 months of Premium" web-modal iframe)

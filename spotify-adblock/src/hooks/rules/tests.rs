@@ -35,6 +35,28 @@ fn ad_rules_cover_in_app_message_upsells() {
 }
 
 #[test]
+fn ad_rules_cover_ad_metadata_sponsored_content_and_gabo_events() {
+    assert!(is_ad_related_url(
+        "https://spclient.wg.spotify.com/ad-dsa-metadata-lookup/v1/lookup"
+    ));
+    assert!(is_ad_related_url(
+        "https://api-partner.spotify.com/pathfinder/v2/query?operationName=episodeSponsoredContent"
+    ));
+    assert!(is_ad_related_url(
+        "https://spclient.wg.spotify.com/gabo-receiver-service/v3/events"
+    ));
+    assert!(is_ad_related_url(
+        "https://spclient.wg.spotify.com/gabo-receiver-service/public/v3/events/"
+    ));
+    assert!(!is_ad_related_url(
+        "https://spclient.wg.spotify.com/gabo-receiver-service/v3/other"
+    ));
+    assert!(!is_ad_related_url(
+        "https://api-partner.spotify.com/pathfinder/v2/query?operationName=home"
+    ));
+}
+
+#[test]
 fn ad_rules_scope_playback_restrictions_to_spotify_client_hosts() {
     assert!(is_ad_related_url(
         "https://spclient.wg.spotify.com/playback/restrictions"

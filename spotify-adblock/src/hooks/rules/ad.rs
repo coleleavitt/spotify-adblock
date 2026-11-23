@@ -54,6 +54,7 @@ fn core_ad_endpoint(url: &str) -> bool {
             "spotify.ads.proto.",
             "VND.Spotify.Ads-Payload",
             "injected-ad",
+            "ad-dsa-metadata-lookup",
         ],
     )
 }
@@ -112,6 +113,8 @@ fn sponsored_or_promoted_content(url: &str) -> bool {
             "spotify:partner:",
             "partnership",
             "promoted",
+            // pathfinder operation names, e.g. episodeSponsoredContent
+            "Sponsored",
         ],
     )
 }
@@ -199,8 +202,9 @@ fn gabo_ad_event(url: &str) -> bool {
                 "/ad-opportunity",
                 "/adlogic",
                 "/ads",
-                "/v3/events/",
-                "/public/v3/events/",
+                // xpui posts to `/v3/events` without the trailing slash
+                "/v3/events",
+                "/public/v3/events",
             ],
         )
 }

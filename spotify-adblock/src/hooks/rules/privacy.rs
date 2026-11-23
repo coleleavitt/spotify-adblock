@@ -18,6 +18,7 @@ fn privacy_hard_telemetry(url: &str) -> bool {
         || common_capping_route(url)
         || telemetry_turn_route(url)
         || playback_event_route(url)
+        || growth_events_route(url)
 }
 
 #[cfg(feature = "privacy-hard-blocking")]
@@ -77,6 +78,12 @@ fn playback_event_route(url: &str) -> bool {
         || url.contains("media-playback-event")
 }
 
+/// `navigator.sendBeacon("https://www.spotify.com/api/growth-events/<name>")` marketing events.
+#[cfg(feature = "privacy-hard-blocking")]
+fn growth_events_route(url: &str) -> bool {
+    url.contains("spotify.com/api/growth-events/")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -105,6 +112,9 @@ mod tests {
         ));
         assert!(is_privacy_hard_url(
             "https://spclient.wg.spotify.com/v1/msg/media_playback_event_v2"
+        ));
+        assert!(is_privacy_hard_url(
+            "https://www.spotify.com/api/growth-events/web_player_upsell"
         ));
     }
 }
