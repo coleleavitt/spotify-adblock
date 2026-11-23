@@ -19,6 +19,7 @@ fn privacy_hard_telemetry(url: &str) -> bool {
         || telemetry_turn_route(url)
         || playback_event_route(url)
         || growth_events_route(url)
+        || client_metrics_route(url)
 }
 
 #[cfg(feature = "privacy-hard-blocking")]
@@ -84,6 +85,12 @@ fn growth_events_route(url: &str) -> bool {
     url.contains("spotify.com/api/growth-events/")
 }
 
+/// UI error reports to Sentry and Spotify's melody client-metrics batches.
+#[cfg(feature = "privacy-hard-blocking")]
+fn client_metrics_route(url: &str) -> bool {
+    url.contains(".ingest.sentry.io/") || url.contains("/melody/v1/msg/")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -116,5 +123,10 @@ mod tests {
         assert!(is_privacy_hard_url(
             "https://www.spotify.com/api/growth-events/web_player_upsell"
         ));
+        assert!(is_privacy_hard_url(
+            "https://o22381.ingest.sentry.io/api/114855/envelope/?sentry_version=7"
+        ));
+        assert!(is_privacy_hard_url("https://gue1-spclient.spotify.com/melody/v1/msg/batch"));
+        assert!(!is_privacy_hard_url("https://spclient.wg.spotify.com/melody/v1/time"));
     }
 }
