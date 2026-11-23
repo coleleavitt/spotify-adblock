@@ -84,6 +84,8 @@ allowlist = [
 denylist = [
     # Core ad endpoints
     'https://spclient\.wg\.spotify\.com/ads/.*',
+    'https://.*-spclient\.spotify\.com/ads/.*',
+    'https://.*-spclient\.spotify\.com/ad-logic/.*',
     'https://spclient\.wg\.spotify\.com/ad-logic/.*',
     'https://spclient\.wg\.spotify\.com/adlogic/.*',
 
