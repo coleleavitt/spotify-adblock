@@ -12,6 +12,7 @@ group_imports = "StdExternalCrate"
 
 # Safety-critical code preferences
 edition = "2024"
+style_edition = "2024"
 merge_derives = false
 use_field_init_shorthand = false
 use_try_shorthand = false

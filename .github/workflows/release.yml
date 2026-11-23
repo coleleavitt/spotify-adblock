@@ -77,6 +77,8 @@ jobs:
           ref: ${{ needs.prepare.outputs.sha }}
 
       - uses: ./.github/actions/setup
+        with:
+          cache-key: release
 
       - name: Test
         run: |

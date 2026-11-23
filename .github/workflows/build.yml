@@ -11,8 +11,31 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: -D warnings
+
 jobs:
-  build:
+  fmt:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          show-progress: false
+
+      # rustfmt.toml uses nightly-only options (imports_layout, group_imports).
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - name: rustfmt
+        run: cargo fmt --all --check
+
+      - name: version
+        run: sh ci/verify-version.sh
+
+  clippy:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -20,20 +43,33 @@ jobs:
           show-progress: false
 
       - uses: ./.github/actions/setup
+        with:
+          cache-key: clippy
 
-      - name: Verify version
-        run: sh ci/verify-version.sh
+      - name: clippy (default features)
+        run: cargo clippy --locked --workspace --all-targets -- -A clippy::not_unsafe_ptr_arg_deref -A clippy::missing_panics_doc -A unused_unsafe -A unsafe_code
 
-      - name: Clippy
-        run: cargo clippy --locked --all-features -- -A clippy::not_unsafe_ptr_arg_deref -A clippy::missing_panics_doc -A unused_unsafe -A unsafe_code -D warnings
+      - name: clippy (privacy-hard-blocking)
+        run: cargo clippy --locked --workspace --all-targets --all-features -- -A clippy::not_unsafe_ptr_arg_deref -A clippy::missing_panics_doc -A unused_unsafe -A unsafe_code
 
-      - name: Test (default features)
-        run: cargo test --locked --workspace
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          show-progress: false
 
-      - name: Test (privacy-hard-blocking)
-        run: cargo test --locked --workspace --all-features
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: test
 
-      - name: Build release binary
+      - name: test (default features)
+        run: cargo test --locked --workspace --all-targets
+
+      - name: test (privacy-hard-blocking)
+        run: cargo test --locked --workspace --all-targets --all-features
+
+      - name: build release
         run: cargo build --locked --release
 
       - uses: actions/upload-artifact@v7

@@ -1,6 +1,7 @@
 [package]
 name = "cef-sys"
 version = "0.1.0"
+publish.workspace = true
 edition = "2021"
 authors.workspace = true
 description = "Raw FFI bindings for Chromium Embedded Framework (CEF)"
@@ -17,7 +18,6 @@ doctest = false  # Disable doctests for auto-generated FFI bindings
 
 [build-dependencies]
 bindgen.workspace = true
-cc.workspace = true
 
 [dependencies]
 # CEF sys crates typically need minimal runtime dependencies

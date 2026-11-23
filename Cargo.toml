@@ -15,10 +15,10 @@ toml = "0.9.8"
 
 # Build dependencies
 bindgen = "0.72.1"
-cc = "1.0"
 
 [workspace.package]
 version = "2.0.0"
+publish = false
 authors = ["coleleavitt"]
 edition = "2024"
 license = "MIT"
