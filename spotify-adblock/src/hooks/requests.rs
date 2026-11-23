@@ -65,7 +65,7 @@ hook! {
         }
 
         let result = match decide(&url, &method) {
-            Verdict::Block(reason) => {
+            Verdict::Block(reason) | Verdict::Sink(reason) => {
                 logging::log_blocked(reason, &method, &url);
                 null_mut()
             }

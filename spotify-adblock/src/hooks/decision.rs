@@ -4,6 +4,7 @@
 use crate::config::CONFIG;
 
 use super::request_classification::classify_url;
+use super::rules::is_telemetry_upload;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Verdict {
@@ -11,6 +12,9 @@ pub(super) enum Verdict {
     Allow(&'static str),
     /// Refuse the request; the label says which rule matched.
     Block(&'static str),
+    /// Refuse a telemetry upload but report success (204), so the client
+    /// drops it instead of retrying.
+    Sink(&'static str),
 }
 
 pub(super) fn decide(url: &str, method: &str) -> Verdict {
@@ -24,10 +28,14 @@ pub(super) fn decide(url: &str, method: &str) -> Verdict {
     }
     // Gabo event POSTs can carry ad data.
     if classification.is_gabo_event_post {
-        return Verdict::Block("BLOCKED GABO POST");
+        return Verdict::Sink("BLOCKED GABO POST");
     }
     if classification.is_ad_related {
-        return Verdict::Block("BLOCKED AD");
+        return if is_telemetry_upload(url) {
+            Verdict::Sink("BLOCKED TELEMETRY")
+        } else {
+            Verdict::Block("BLOCKED AD")
+        };
     }
     if CONFIG.denylist.is_match(url) {
         return Verdict::Block("BLOCKED CONFIG");
@@ -48,6 +56,30 @@ mod tests {
             "https://spclient.wg.spotify.com/sponsoredplaylist/v1/sponsored",
         ] {
             assert!(matches!(decide(url, "GET"), Verdict::Block(_)), "{url}");
+        }
+    }
+
+    #[test]
+    fn telemetry_uploads_are_sunk_not_failed() {
+        assert_eq!(
+            decide("https://gue1-spclient.spotify.com/gabo-receiver-service/v3/events", "POST"),
+            Verdict::Sink("BLOCKED GABO POST")
+        );
+        assert!(matches!(
+            decide("https://spclient.wg.spotify.com/quicksilver/v2/triggers?trig_type=URI", "GET"),
+            Verdict::Block(_)
+        ));
+    }
+
+    #[cfg(feature = "privacy-hard-blocking")]
+    #[test]
+    fn privacy_hard_metrics_are_sunk() {
+        for url in [
+            "https://gue1-spclient.spotify.com/melody/v1/msg/batch",
+            "https://o22381.ingest.sentry.io/api/114855/envelope/?sentry_version=7",
+            "https://www.spotify.com/api/growth-events/web_player_upsell",
+        ] {
+            assert_eq!(decide(url, "POST"), Verdict::Sink("BLOCKED TELEMETRY"), "{url}");
         }
     }
 

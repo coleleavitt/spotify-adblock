@@ -70,6 +70,17 @@ static FACTORY: LazyLock<cef_scheme_handler_factory_t> = LazyLock::new(|| cef_sc
     create: Some(factory_create),
 });
 
+static SINK_HANDLER: LazyLock<cef_resource_handler_t> = LazyLock::new(|| cef_resource_handler_t {
+    base: static_base(size_of::<cef_resource_handler_t>()),
+    open: Some(sink_open),
+    process_request: Some(block_process_request),
+    get_response_headers: Some(sink_get_response_headers),
+    skip: Some(block_skip),
+    read: Some(block_read),
+    read_response: Some(block_read_response),
+    cancel: Some(block_cancel),
+});
+
 static BLOCK_HANDLER: LazyLock<cef_resource_handler_t> = LazyLock::new(|| cef_resource_handler_t {
     base: static_base(size_of::<cef_resource_handler_t>()),
     open: Some(block_open),
@@ -111,13 +122,14 @@ extern "C" fn factory_create(
     release(request);
 
     match verdict {
-        Some(true) => ptr::from_ref::<cef_resource_handler_t>(&BLOCK_HANDLER).cast_mut(),
-        _ => null_mut(),
+        Some(Verdict::Block(_)) => ptr::from_ref::<cef_resource_handler_t>(&BLOCK_HANDLER).cast_mut(),
+        Some(Verdict::Sink(_)) => ptr::from_ref::<cef_resource_handler_t>(&SINK_HANDLER).cast_mut(),
+        Some(Verdict::Allow(_)) | None => null_mut(),
     }
 }
 
-/// `Some(true)` to block, `Some(false)` to allow, `None` when the request is unreadable.
-fn classify_request(request: *mut _cef_request_t) -> Option<bool> {
+/// The verdict for a request, or `None` when it cannot be read (then it is allowed).
+fn classify_request(request: *mut _cef_request_t) -> Option<Verdict> {
     if request.is_null() {
         return None;
     }
@@ -132,15 +144,13 @@ fn classify_request(request: *mut _cef_request_t) -> Option<bool> {
 
     if *DEBUG_MODE {
         logging::log_debug(&format!("UI {method} {url}"));
-        return Some(false);
+        return Some(Verdict::Allow("DEBUG"));
     }
-    match decide(&url, &method) {
-        Verdict::Block(reason) => {
-            logging::log_blocked(&format!("UI {reason}"), &method, &url);
-            Some(true)
-        }
-        Verdict::Allow(_) => Some(false),
+    let verdict = decide(&url, &method);
+    if let Verdict::Block(reason) | Verdict::Sink(reason) = verdict {
+        logging::log_blocked(&format!("UI {reason}"), &method, &url);
     }
+    Some(verdict)
 }
 
 // ---- handler that cancels the request ------------------------------------------------
@@ -159,6 +169,44 @@ extern "C" fn block_open(
         unsafe { *handle_request = 1 };
     }
     0
+}
+
+extern "C" fn sink_open(
+    _self: *mut _cef_resource_handler_t,
+    request: *mut _cef_request_t,
+    handle_request: *mut c_int,
+    callback: *mut _cef_callback_t,
+) -> c_int {
+    release(request);
+    release(callback);
+    if !handle_request.is_null() {
+        // SAFETY: Category 8 - FFI boundary. CEF passes a valid out-parameter.
+        // `handle_request = 1` with a true return means "respond now".
+        unsafe { *handle_request = 1 };
+    }
+    1
+}
+
+extern "C" fn sink_get_response_headers(
+    _self: *mut _cef_resource_handler_t,
+    response: *mut _cef_response_t,
+    response_length: *mut i64,
+    _redirect_url: *mut cef_string_t,
+) {
+    if !response.is_null() {
+        // SAFETY: Category 8 - FFI boundary. `response` is a live CEF response
+        // for this call; its function table is owned by CEF.
+        unsafe {
+            if let Some(set_status) = (*response).set_status {
+                set_status(response, 204);
+            }
+        }
+    }
+    release(response);
+    if !response_length.is_null() {
+        // SAFETY: Category 8 - FFI boundary. CEF passes a valid out-parameter.
+        unsafe { *response_length = 0 };
+    }
 }
 
 extern "C" fn block_process_request(
@@ -324,6 +372,17 @@ mod tests {
         let handler = ptr::from_ref::<cef_resource_handler_t>(&BLOCK_HANDLER).cast_mut();
         let opened = block_open(handler, null_mut(), &raw mut handle, null_mut());
         assert_eq!((opened, handle), (0, 1));
+    }
+
+    #[test]
+    fn sink_handler_responds_immediately() {
+        let mut handle = 0;
+        let handler = ptr::from_ref::<cef_resource_handler_t>(&SINK_HANDLER).cast_mut();
+        let opened = sink_open(handler, null_mut(), &raw mut handle, null_mut());
+        assert_eq!((opened, handle), (1, 1));
+        let mut length = -1;
+        sink_get_response_headers(handler, null_mut(), &raw mut length, null_mut());
+        assert_eq!(length, 0);
     }
 
     #[test]
