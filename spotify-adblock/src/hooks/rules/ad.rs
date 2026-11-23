@@ -21,6 +21,7 @@ pub(in crate::hooks) fn is_ad_related_url(url: &str) -> bool {
             || concert_location_tracking(url)
             || leavebehind_ad(url)
             || misc_ad_related(url)
+            || in_app_message_upsell(url)
             || privacy::is_privacy_hard_url(url))
 }
 
@@ -231,6 +232,22 @@ fn leavebehind_ad(url: &str) -> bool {
         ],
     ) || (url.contains("graphql")
         && contains_any(url, &["leavebehind", "getLeavebehind", "GetLeavebehind"]))
+}
+
+/// Quicksilver/Pendragon in-app messaging: the server-driven "web-modal" iframe
+/// behind upsell popups such as "Miss ad-free music listening? Get 2 months of
+/// Premium". xpui requests `@webgate/quicksilver/v2/{triggers,messages,preview}`
+/// (1.2.x) and `@webgate/pendragon/com.spotify.pendragon.v1.ClientMessageService/*`
+/// (1.3.x); with no triggers the client never asks for a message.
+fn in_app_message_upsell(url: &str) -> bool {
+    contains_any(
+        url,
+        &[
+            "/quicksilver/v",
+            "/quicksilverdev/v",
+            "com.spotify.pendragon.v1.ClientMessageService",
+        ],
+    )
 }
 
 fn misc_ad_related(url: &str) -> bool {

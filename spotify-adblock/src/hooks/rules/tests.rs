@@ -19,6 +19,22 @@ fn ad_rules_cover_sponsored_and_ida_paths() {
 }
 
 #[test]
+fn ad_rules_cover_in_app_message_upsells() {
+    assert!(is_ad_related_url(
+        "https://spclient.wg.spotify.com/quicksilver/v2/triggers?trig_type=URI&ctv_type=web-modal&"
+    ));
+    assert!(is_ad_related_url(
+        "https://gae2-spclient.spotify.com/quicksilver/v2/messages?ctv_type=web-modal&trigger=app%3Astart&locale=en&trig_type=CLIENT_EVENT"
+    ));
+    assert!(is_ad_related_url(
+        "https://spclient.wg.spotify.com/pendragon/com.spotify.pendragon.v1.ClientMessageService/FetchMessageList"
+    ));
+    assert!(!is_ad_related_url(
+        "https://spclient.wg.spotify.com/metadata/4/track/abc"
+    ));
+}
+
+#[test]
 fn ad_rules_scope_playback_restrictions_to_spotify_client_hosts() {
     assert!(is_ad_related_url(
         "https://spclient.wg.spotify.com/playback/restrictions"
