@@ -131,9 +131,29 @@ if is_ours "$launcher"; then
 #!/bin/sh
 $MARKER
 lib="\${SPOTIFY_ADBLOCK_LIB:-$lib}"
-[ -r "\$lib" ] || { echo "spotify-adblock: missing \$lib" >&2; exit 127; }
-export LD_PRELOAD="\$lib\${LD_PRELOAD:+:\$LD_PRELOAD}"
-exec "\${SPOTIFY_BIN:-spotify}" "\$@"
+EOF
+    cat >>"$launcher" <<'EOF'
+[ -r "$lib" ] || { echo "spotify-adblock: missing $lib" >&2; exit 127; }
+
+# Spotify's own switches for the home-page takeover ad and promoted songs
+# (registered by the client, default false). Set them before launch, since a
+# running Spotify rewrites its prefs file. SPOTIFY_ADBLOCK_KEEP_PREFS=1 skips this.
+if [ -z "${SPOTIFY_ADBLOCK_KEEP_PREFS:-}" ] && ! pgrep -x spotify >/dev/null 2>&1; then
+    for prefs in "${XDG_CONFIG_HOME:-$HOME/.config}"/spotify/Users/*/prefs; do
+        [ -w "$prefs" ] || continue
+        for key in ui.hide_hpto ui.hide_promoted_songs; do
+            pattern="^$(printf '%s' "$key" | sed 's/\./\\./g')="
+            if grep -q "$pattern" "$prefs"; then
+                sed -i "s/$pattern.*/$key=true/" "$prefs"
+            else
+                printf '%s=true\n' "$key" >>"$prefs"
+            fi
+        done
+    done
+fi
+
+export LD_PRELOAD="$lib${LD_PRELOAD:+:$LD_PRELOAD}"
+exec "${SPOTIFY_BIN:-spotify}" "$@"
 EOF
     chmod 755 "$launcher"
     say "installed $launcher"

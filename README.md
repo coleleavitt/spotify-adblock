@@ -24,6 +24,10 @@ This installs, for your user only:
 
 Then start Spotify with `spotify-adblock` (or from the launcher). Re-run the same command to update.
 
+Before launching, the launcher also turns on two of Spotify's own prefs, `ui.hide_hpto` (home-page takeover
+ads) and `ui.hide_promoted_songs`. It only does this when Spotify isn't running, because Spotify rewrites its
+prefs file. Set `SPOTIFY_ADBLOCK_KEEP_PREFS=1` to skip it.
+
 Options go after `sh -s --`:
 
 ```sh
