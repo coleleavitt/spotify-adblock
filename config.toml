@@ -113,6 +113,10 @@ denylist = [
     'https://spclient\.wg\.spotify\.com/gabo-receiver-service/public/v3/events/.*',
     'sp://ads/v1/ads/.*',
 
+    # In-app messaging upsell modals ("Get 2 months of Premium" web-modal iframe)
+    'https://[^/]*spclient[^/]*\.spotify\.com/quicksilver(dev)?/.*',
+    'https://[^/]*spclient[^/]*\.spotify\.com/pendragon/com\.spotify\.pendragon\.v1\.ClientMessageService/.*',
+
     # Skip limit enforcement
     'https://spclient\.wg\.spotify\.com/.*/RemainingSkipsRequest',
     'https://spclient\.wg\.spotify\.com/.*/RemainingSkipsResponse',
